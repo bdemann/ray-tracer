@@ -37,7 +37,7 @@ public class Sphere extends Shape {
 	@Override
 	public Point3D intersect(Ray3D ray) {
 		// TODO Auto-generated method stub
-		if(cheat){
+		if(shadowing){
 			return geometricIntersection(ray);
 		} else {
 			return quadraticIntersection(ray);

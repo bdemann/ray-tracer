@@ -32,29 +32,17 @@ public class Triangle extends Shape {
 	public Point3D intersect(Ray3D ray) {
 		Point3D r0 = ray.getOrigin();
 		Point3D rd = ray.getDirection().normalize();
-		double x0 = r0.getX();
-		double y0 = r0.getY();
-		double z0 = r0.getZ();
-		
-		double xd = rd.getX();
-		double yd = rd.getY();
-		double zd = rd.getZ();
-
 		Point3D n = getNormal(null).normalize();
-		double a = n.getX();
-		double b = n.getY();
-		double c = n.getZ();
-		
 		
 		/*
 		 * calculate distance from (0,0,0) to plane
 		 * We should be able to do this by getting a vector from on of the triangle points to the origin. Next we need to dot project it to the normal vector
 		 */
-		double d = n.multiply(this.a.subtract(new Point3D(0,0,0)).dotProduct(n)).magnitude();
-		//System.out.println("d = " + d + " and distance is " + distanceToOrigin());
+		Point3D toOrigin = new Point3D(0,0,0).subtract(this.a);
+		double d = n.multiply(toOrigin.dotProduct(n)).magnitude();
 		
-		double tNum = -(a*x0 + b*y0 + c*z0 + d);
-		double tDen = (a*xd + b*yd + c*zd);
+		double tNum = -(n.dotProduct(r0) + d);
+		double tDen = n.dotProduct(rd);
 		
 		if(tDen == 0){
 			return null;

@@ -140,7 +140,7 @@ public class RayTracer {
 			blue += reflect.getBlue() * (target.getReflectInt().getBlue());
 			green += reflect.getGreen() * (target.getReflectInt().getGreen());
 		} else if(target.getType() == Shape.TRANSPARENT){
-			Point3D refract = refract(ray, target.getIndexOfRefraction());
+			Point3D refract = refract(ray, target.getIndexOfRefraction(),n);
 			Color transmission = tracePixel(new Ray3D(launchPoint, refract), depth + 1);
 			red = transmission.getRed();
 			green = transmission.getGreen();
@@ -163,15 +163,15 @@ public class RayTracer {
 			blue = 0;
 		}
 		
-		if(red < 0){
-			red = 0;
-		}
-		if(green < 0){
-			green = 0;
-		}
-		if(blue < 0){
-			blue = 0;
-		}
+//		if(red < 0){
+//			red = 0;
+//		}
+//		if(green < 0){
+//			green = 0;
+//		}
+//		if(blue < 0){
+//			blue = 0;
+//		}
 		Color color = new Color(red, green, blue);
 		//color = diffuse;
 		//Color = ambient + diffuse + specular + shadow + reflectedColor + refractedColor
@@ -190,18 +190,30 @@ public class RayTracer {
 		return d.subtract(twoNDDotN);
 	}
 
-	private Point3D refract(Ray3D ray, double indexOfRefraction) {
-		return ray.getDirection();
+	private Point3D refract(Ray3D ray, double indexOfRefraction, Point3D normal) {
+		double ni = ray.indexOfRefraction;
+		double nt = indexOfRefraction;
+		//angle = acos(v1•v2)
+		Point3D rd = ray.getDirection().normalize();
+		Point3D n = normal.normalize();
+		double theta = Math.acos(n.dotProduct(rd));
+		double sinPhi = (ni * Math.sin(theta))/nt;
+		double phi = Math.asin(sinPhi);
+		
+		double sin = Math.pow(ni/nt, 2) + (1 + Math.pow(Math.cos(theta), 2));
+		Point3D t = rd.multiply(ni/nt).subtract(normal.multiply((ni/nt) * Math.cos(theta) + Math.sqrt(1-sin)));
+		
+		return t;
 	}
 
 	private boolean inShadow(Ray3D ray) {
 		for(int i = 0; i < shapes.size(); i++){
-			shapes.get(i).cheat = true;
+			shapes.get(i).shadowing = true;
 			Point3D intersect = shapes.get(i).intersect(ray);
 			if(intersect != null){
 				return true;
 			}
-			shapes.get(i).cheat = false;
+			shapes.get(i).shadowing = false;
 		}
 		return false;
 	}
@@ -247,7 +259,7 @@ public class RayTracer {
 		setUpViewPort(54);
 		
 		cl = new Color(1,1,1);
-		lightDir = new Point3D(1000000,0,0);		
+		lightDir = new Point3D(1,0,0);		
 		ambient = new Color(0.1,0.1,0.1);
 		backgroundColor = new Color(0.2, 0.2, 0.2);
 

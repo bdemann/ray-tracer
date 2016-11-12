@@ -15,7 +15,7 @@ public abstract class Shape {
 	protected double indexOfRefraction;
 	protected Color reflectInt;
 	protected Color refractInt;
-	public boolean cheat;
+	public boolean shadowing;
 	
 	public Shape(int type, Color reflectInt){
 		this(type, new Color(0,0,0), new Color(1,1,1), 32);

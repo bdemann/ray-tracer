@@ -6,8 +6,10 @@ public class Ray3D {
 
 	private Point3D origin;
 	private Point3D direction;
+	public double indexOfRefraction;
 	
 	public Ray3D(Point3D origin, Point3D direction){
+		indexOfRefraction = 1.0003;
 		this.origin = origin;
 		this.direction = direction;
 	}
