@@ -1,5 +1,8 @@
 package rayTracer;
 
+import java.io.FileWriter;
+import java.io.IOException;
+
 import javafx.geometry.Point3D;
 
 public class Sphere extends Shape {
@@ -37,7 +40,7 @@ public class Sphere extends Shape {
 	@Override
 	public Point3D intersect(Ray3D ray) {
 		// TODO Auto-generated method stub
-		if(shadowing){
+		if(false){
 			return geometricIntersection(ray);
 		} else {
 			return quadraticIntersection(ray);
@@ -58,13 +61,14 @@ public class Sphere extends Shape {
 				  rD.getX() * r0.getX() - rD.getX() * center.getX()
 				+ rD.getY() * r0.getY() - rD.getY() * center.getY()
 				+ rD.getZ() * r0.getZ() - rD.getZ() * center.getZ());
-		
+
 		//C = xo^2- 2xoxc+ xc^2+ yo^2- 2yoyc+ yc^2+ zo^2-2zozc+ zc^2 - r^2 
 		double c = 
 				  Math.pow(r0.getX(), 2) - 2*r0.getX()*center.getX() + Math.pow(center.getX(), 2)
-				+ Math.pow(r0.getY(), 2) - 2*r0.getX()*center.getY() + Math.pow(center.getY(), 2)
+				+ Math.pow(r0.getY(), 2) - 2*r0.getY()*center.getY() + Math.pow(center.getY(), 2)
 				+ Math.pow(r0.getZ(), 2) - 2*r0.getZ()*center.getZ() + Math.pow(center.getZ(), 2)
 				- Math.pow(radius, 2);
+		
 		//Calculate the discriminant D = B^2-4C
 		double d = Math.pow(b, 2)-4*c;
 		//If D < 0 return null; (no interesection point)
@@ -115,7 +119,7 @@ public class Sphere extends Shape {
 		}
 		/*
 		 * Project A onto B
-		 *  1) Unit vector B
+		 *  1) Unit vector B = rd
 		 *  2) a.dotProduct(b)
 		 *  3) b.multpliy(dot) = aOnB
 		 */
@@ -144,14 +148,17 @@ public class Sphere extends Shape {
 			return null;
 		}
 		
-		//6 Otherwise calculate teh intersection distance
+		//6 Otherwise calculate the intersection distance
 		double t;
 		if(inside){
 			t = tca - Math.sqrt(thcSqrd);
 		} else {
 			t = tca + Math.sqrt(thcSqrd);
 		}
-		return r0.add(rd.multiply(t));
+		
+		Point3D result = r0.add(rd.multiply(t));
+		
+		return result;
 	}
 	
 	public String toString(){
@@ -167,4 +174,11 @@ public class Sphere extends Shape {
 		return new Point3D(x,y,z);
 	}
 
+	public double getRadius(){
+		return radius;
+	}
+
+	public Point3D getCenter() {
+		return center;
+	}
 }

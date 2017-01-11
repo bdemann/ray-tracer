@@ -1,11 +1,13 @@
 package rayTracer;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import javafx.geometry.Point3D;
 
 public class RayTracer {
-	private static final int MAX_DEPTH = 2;
+	private static final int MAX_DEPTH = 10;
 	private ImageBuffer result;
 	private Point3D eye;
 	private Point3D lookAt;
@@ -19,6 +21,8 @@ public class RayTracer {
 	private Color ambient;
 	private Color cl;
 	private Point3D lightDir;
+
+	FileWriter fw = null;
 	
 	public static void main(String[] args){
 		System.out.println("Starting Ray Tracer");
@@ -48,11 +52,18 @@ public class RayTracer {
 			makeTestScene();
 		}
 
-		result = new ImageBuffer(512,512);
+		result = new ImageBuffer(300,300);
 		maxDepth = MAX_DEPTH;
 	}
 	
 	public void traceImage(String fileName){
+
+		try {
+			fw = new FileWriter("results/pointsQuad.txt");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		int width = result.getWidth();
 		int height = result.getHeight();
 		for(int i = 0; i < width; i++){ 		//For each row
@@ -67,6 +78,12 @@ public class RayTracer {
 				Color c = tracePixel(primaryRay, 0);
 				result.setColor(i,j,c);
 			}
+		}
+		try {
+			fw.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		result.save(fileName);
 	}
@@ -92,6 +109,7 @@ public class RayTracer {
 		//Figure out what object was hit
 		Shape target = null;
 		Point3D closest = null;
+		
 		for(int i = 0; i < shapes.size(); i++){
 			Point3D intersect = shapes.get(i).intersect(ray);
 			if(intersect == null){
@@ -106,9 +124,17 @@ public class RayTracer {
 			return backgroundColor;
 		}
 
+		try {
+			fw.append("addpoint(geoself(), set(");
+			fw.append(closest.getX() + "," + closest.getY() + "," + closest.getZ());
+			fw.append("));\n");
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		Point3D n = target.getNormal(closest).normalize();
 		//calculate launch point of new ray
-		Point3D launchPoint = closest.add(n.multiply(0.1));
+		Point3D launchPoint = closest.add(n.multiply(0.00001));
 		
 		//figure out if in shadow
 		boolean shadow = inShadow(new Ray3D(launchPoint, lightDir));
@@ -133,6 +159,15 @@ public class RayTracer {
 			green += cl.getGreen() * cp.getGreen() * Math.pow(Math.max(0, e.dotProduct(r)), target.getPhongConst());
 			blue *= (ambient.getBlue() + cl.getBlue() * Math.max(0,nDotL));
 			blue += cl.getBlue() * cp.getBlue() * Math.pow(Math.max(0, e.dotProduct(r)), target.getPhongConst());
+			
+			if(target instanceof Sphere && false){
+				red = (closest.subtract(((Sphere)target).getCenter()).magnitude()) / (((Sphere)target).getRadius() * 2);
+
+				red = Math.abs(closest.getZ() - ((Sphere)target).getCenter().getZ()) / (((Sphere)target).getRadius() * 2);
+				//System.out.println(red);
+				blue = red;
+				green = red;
+			}
 		} else if(target.getType() == Shape.REFLECTIVE){
 			Point3D reflection = reflect(ray, n);
 			Color reflect = tracePixel(new Ray3D(launchPoint, reflection), depth + 1);
@@ -157,7 +192,7 @@ public class RayTracer {
 			blue = 1;
 		}
 
-		if(shadow){
+		if(shadow && target.getType() != Shape.REFLECTIVE){
 			red = 0;
 			green = 0;
 			blue = 0;
@@ -203,17 +238,15 @@ public class RayTracer {
 		double sin = Math.pow(ni/nt, 2) + (1 + Math.pow(Math.cos(theta), 2));
 		Point3D t = rd.multiply(ni/nt).subtract(normal.multiply((ni/nt) * Math.cos(theta) + Math.sqrt(1-sin)));
 		
-		return t;
+		return ray.getDirection();
 	}
 
 	private boolean inShadow(Ray3D ray) {
 		for(int i = 0; i < shapes.size(); i++){
-			shapes.get(i).shadowing = true;
 			Point3D intersect = shapes.get(i).intersect(ray);
 			if(intersect != null){
 				return true;
 			}
-			shapes.get(i).shadowing = false;
 		}
 		return false;
 	}
@@ -283,6 +316,7 @@ public class RayTracer {
 
 		shapes = new ArrayList<Shape>();
 		shapes.add(new Sphere(new Point3D(0, 0.3, 0), 0.2, Shape.REFLECTIVE, new Color(0.75,0.75,0.75)));
+		//shapes.add(new Sphere(new Point3D(0, 0.3, 0), 0.2, Shape.DIFFUSE, new Color(0.75,0.75,0.75), new Color(1,1,1), 4));
 		shapes.add(new Triangle(new Point3D(0, -0.5, 0.5), new Point3D(1, 0.5, 0), new Point3D(0, -0.5, -0.5), Shape.DIFFUSE, new Color(0,0,1), new Color(1,1,1), 4));
 		shapes.add(new Triangle(new Point3D(0, -0.5, 0.5), new Point3D(0, -0.5, -0.5), new Point3D(-1, 0.5, 0), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
 	}
@@ -298,7 +332,8 @@ public class RayTracer {
 		backgroundColor = new Color(0.2, 0.2, 0.2);
 
 		shapes = new ArrayList<Shape>();
-		shapes.add(new Sphere(new Point3D(0, 0, 0), 0.2322, Shape.TRANSPARENT, new Color(1,1,1), 1.33));
+		
+		shapes.add(new Sphere(new Point3D(0,0,0), 0.2322, Shape.TRANSPARENT, new Color(1,1,1), 1.3));
 		shapes.add(new Sphere(new Point3D(0.25, 0.25, -0.6), 0.1161, Shape.DIFFUSE, new Color(1,1,0), new Color(0,0,0), 4));
 		shapes.add(new Sphere(new Point3D(-0.25, 0.25, -0.6), 0.1161, Shape.DIFFUSE, new Color(1,0,0), new Color(0,0,0), 4));
 		shapes.add(new Sphere(new Point3D(-0.25, -0.25, -0.6), 0.1161, Shape.DIFFUSE, new Color(0,0,1), new Color(0,0,0), 4));

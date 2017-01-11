@@ -39,7 +39,9 @@ public class Triangle extends Shape {
 		 * We should be able to do this by getting a vector from on of the triangle points to the origin. Next we need to dot project it to the normal vector
 		 */
 		Point3D toOrigin = new Point3D(0,0,0).subtract(this.a);
-		double d = n.multiply(toOrigin.dotProduct(n)).magnitude();
+		//double d = n.multiply(toOrigin.dotProduct(n)).magnitude();
+
+		double d = toOrigin.dotProduct(n);
 		
 		double tNum = -(n.dotProduct(r0) + d);
 		double tDen = n.dotProduct(rd);

@@ -3,3 +3,4 @@
 .project
 RayTracer.iml
 .classpath
+results/
