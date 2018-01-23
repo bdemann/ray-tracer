@@ -40,7 +40,8 @@ public class Sphere extends Shape {
 	@Override
 	public Point3D intersect(Ray3D ray) {
 		// TODO Auto-generated method stub
-		if(false){
+		boolean useGeometric = false;
+		if(useGeometric){
 			return geometricIntersection(ray);
 		} else {
 			return quadraticIntersection(ray);
