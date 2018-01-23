@@ -1,9 +1,9 @@
-package rayTracer;
+package rayTracer.geo;
 
 import java.io.FileWriter;
 import java.io.IOException;
 
-import javafx.geometry.Point3D;
+import rayTracer.Color;
 
 public class Sphere extends Shape {
 

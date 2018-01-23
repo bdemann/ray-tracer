@@ -1,6 +1,4 @@
-package rayTracer;
-
-import javafx.geometry.Point3D;
+package rayTracer.geo;
 
 public class Ray3D {
 

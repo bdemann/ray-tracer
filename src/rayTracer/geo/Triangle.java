@@ -1,6 +1,6 @@
-package rayTracer;
+package rayTracer.geo;
 
-import javafx.geometry.Point3D;
+import rayTracer.Color;
 
 public class Triangle extends Shape {
 

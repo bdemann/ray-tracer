@@ -4,7 +4,11 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import javafx.geometry.Point3D;
+import rayTracer.geo.Point3D;
+import rayTracer.geo.Ray3D;
+import rayTracer.geo.Shape;
+import rayTracer.geo.Sphere;
+import rayTracer.geo.Triangle;
 
 public class RayTracer {
 	private static final int MAX_DEPTH = 10;
@@ -216,7 +220,7 @@ public class RayTracer {
 	}
 
 	private Point3D reflect(Ray3D ray, Point3D n) {
-		// r = d – 2n(d · n)
+		// r = d ï¿½ 2n(d ï¿½ n)
 		Point3D d = ray.getDirection();
 		
 		double dDotN = d.dotProduct(n);
@@ -228,7 +232,7 @@ public class RayTracer {
 	private Point3D refract(Ray3D ray, double indexOfRefraction, Point3D normal) {
 		double ni = ray.indexOfRefraction;
 		double nt = indexOfRefraction;
-		//angle = acos(v1•v2)
+		//angle = acos(v1ï¿½v2)
 		Point3D rd = ray.getDirection().normalize();
 		Point3D n = normal.normalize();
 		double theta = Math.acos(n.dotProduct(rd));
