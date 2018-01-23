@@ -65,5 +65,10 @@ public class Point3D {
 	public double getZ() {
 		return this._z;
 	}
+	
+	@Override
+	public String toString() {
+		return String.format("(%f,%f,%f)", this._x, this._y, this._z);
+	}
 
 }

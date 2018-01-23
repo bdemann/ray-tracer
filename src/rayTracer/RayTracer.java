@@ -1,5 +1,6 @@
 package rayTracer;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -23,7 +24,7 @@ public class RayTracer {
 	FileWriter fw = null;
 	
 	public static void main(String[] args){
-		boolean testImages = true;
+		boolean testImages = false;
 		System.out.println("Starting Ray Tracer");
 		if(testImages){
 			for(int i = 0; i < 4; i++){
@@ -31,8 +32,16 @@ public class RayTracer {
 				System.out.println("Finished image " + i);
 			}
 		} else {
-			for(int i = 0; i < 360; i++){
-				new RayTracer(4, i).traceImage("./results/turnAround/image" + i + ".png");
+			for(int frame = 0; frame < 360; frame++){
+				int sceneNumber = 1;
+				String path = String.format("./results/turnAround/%d/", sceneNumber);
+				File dir = new File(path);
+				if(!dir.exists()) {
+					dir.mkdirs();
+					System.out.print("Looks like the dir is made now!");
+				}
+				String fileName = String.format("image%d.%04d.png", sceneNumber, frame);
+				new RayTracer(sceneNumber, frame).traceImage(path + fileName);
 			}
 		}
 //		new RayTracer(0).traceImage("./results/image" + 0 + ".png");
@@ -42,22 +51,25 @@ public class RayTracer {
 	public RayTracer(int scene, int frame) {
 		switch(scene){
 		case 0:
-			makeTestScene();
+			makeTestScene(frame);
 			break;
 		case 1:
-			makeScene1();
+			makeScene1(frame);
 			break;
 		case 2:
-			makeScene2();
+			makeScene2(frame);
 			break;
 		case 3:
-			makeScene3();
+			makeScene3(frame);
 			break;
 		case 4:
 			makeScene(frame);
 			break;
+		case 5:
+			makeScene5(frame);
+			break;
 		default:
-			makeTestScene();
+			makeTestScene(frame);
 		}
 		
 		maxDepth = MAX_DEPTH;
@@ -65,6 +77,11 @@ public class RayTracer {
 	
 	public void traceImage(String fileName){
 
+		boolean skipTracing = true;
+		if(skipTracing) {
+			return;
+		}
+		
 		try {
 			fw = new FileWriter("results/pointsQuad.txt");
 		} catch (IOException e) {
@@ -237,6 +254,10 @@ public class RayTracer {
 	}
 
 	private boolean inShadow(Ray3D ray) {
+		boolean noShadow= true;
+		if(noShadow) {
+			return false;
+		}
 		for(int i = 0; i < shapes.size(); i++){
 			Point3D intersect = shapes.get(i).intersect(ray);
 			if(intersect != null){
@@ -246,7 +267,7 @@ public class RayTracer {
 		return false;
 	}
 	
-	public void makeTestScene(){
+	public void makeTestScene(int frame){
 		Point3D eye = new Point3D(0, 0, 1.2);
 		Point3D lookAt = new Point3D(0,0,0);
 		Point3D upVector = new Point3D(0,1,0);
@@ -275,11 +296,18 @@ public class RayTracer {
 //		shapes.add(new Sphere(new Point3D(-0.5, 0, 0), .05, Shape.DIFFUSE, new Color(0,0,1), new Color(1,1,1), 32));
 	}
 	
-	private void makeScene1(){
+	private void makeScene1(int frame){
+		double radius = 2;
+		double xPos = radius * Math.cos(Math.toRadians(frame));
+		double zPos = radius * Math.sin(Math.toRadians(frame));
+		
 		Point3D lookAt = new Point3D(0,0,0);
-		Point3D eye = new Point3D(2, 0, 0);
+		Point3D eye = new Point3D(xPos, 0, zPos);
 		Point3D upVector = new Point3D(0,1,0);
 		int width = 900;
+		System.out.print("This is the eye location at frame ");
+		System.out.print(frame);
+		System.out.println(eye);
 		cam = new Camera(eye, lookAt, upVector, width, (int)(width*(9.0/16.0)), 54);
 		
 		cl = new Color(1,1,1);
@@ -291,8 +319,32 @@ public class RayTracer {
 		shapes.add(new Sphere(new Point3D(0.35, 0, -0.1), 0.05, Shape.DIFFUSE, new Color(1,1,1), new Color(1,1,1), 4));
 		shapes.add(new Sphere(new Point3D(0.2, 0, -0.1), 0.075, Shape.DIFFUSE, new Color(1,0,0), new Color(.5,1,.5), 32));
 		shapes.add(new Sphere(new Point3D(-0.6, 0, 0), 0.3, Shape.DIFFUSE, new Color(0,1,0), new Color(.5,1,.5), 32));
-//		shapes.add(new Triangle(new Point3D(0.3, -0.3, -0.4), new Point3D(0, 0.3, -0.1), new Point3D(-0.3, -0.3, 0.2), Shape.DIFFUSE, new Color(0,0,1), new Color(1,1,1), 32));
-//		shapes.add(new Triangle(new Point3D(-0.2, 0.1, 0.1), new Point3D(-0.2, -0.5, 0.2), new Point3D(-0.2, 0.1, -0.3), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
+		shapes.add(new Triangle(new Point3D(0.3, -0.3, -0.4), new Point3D(0, 0.3, -0.1), new Point3D(-0.3, -0.3, 0.2), Shape.DIFFUSE, new Color(0,0,1), new Color(1,1,1), 32));
+		shapes.add(new Triangle(new Point3D(-0.2, 0.1, 0.1), new Point3D(-0.2, -0.5, 0.2), new Point3D(-0.2, 0.1, -0.3), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
+	}
+	
+	private void makeScene5(int frame){
+		double radius = 2;
+		double xPos = radius * Math.cos(Math.toRadians(frame));
+		double zPos = radius * Math.sin(Math.toRadians(frame));
+		
+		Point3D lookAt = new Point3D(0,0,0);
+		Point3D eye = new Point3D(xPos, 0, zPos);
+		Point3D upVector = new Point3D(0,1,0);
+		int width = 900;
+		cam = new Camera(eye, lookAt, upVector, width, (int)(width*(9.0/16.0)), 54);
+		
+		cl = new Color(1,1,1);
+		lightDir = new Point3D(1,0,0);		
+		ambient = new Color(0.1,0.1,0.1);
+		backgroundColor = new Color(0.2, 0.2, 0.2);
+
+		shapes = new ArrayList<Shape>();
+//		shapes.add(new Sphere(new Point3D(0.35, 0, -0.1), 0.05, Shape.DIFFUSE, new Color(1,1,1), new Color(1,1,1), 4));
+//		shapes.add(new Sphere(new Point3D(0.2, 0, -0.1), 0.075, Shape.DIFFUSE, new Color(1,0,0), new Color(.5,1,.5), 32));
+//		shapes.add(new Sphere(new Point3D(-0.6, 0, 0), 0.3, Shape.DIFFUSE, new Color(0,1,0), new Color(.5,1,.5), 32));
+		shapes.add(new Triangle(new Point3D(0.3, -0.3, -0.4), new Point3D(0, 0.3, -0.1), new Point3D(-0.3, -0.3, 0.2), Shape.DIFFUSE, new Color(0,0,1), new Color(1,1,1), 32));
+		shapes.add(new Triangle(new Point3D(-0.2, 0.1, 0.1), new Point3D(-0.2, -0.5, 0.2), new Point3D(-0.2, 0.1, -0.3), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
 	}
 	
 	private void makeScene(int frame){
@@ -335,7 +387,7 @@ public class RayTracer {
 //		shapes.add(new Triangle(new Point3D(-0.2, 0.1, 0.1), new Point3D(-0.2, -0.5, 0.2), new Point3D(-0.2, 0.1, -0.3), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
 	}
 	
-	private void makeScene2(){
+	private void makeScene2(int frame){
 		Point3D lookAt = new Point3D(0,0,0);
 		Point3D eye = new Point3D(0, 0, 1.2);
 		Point3D upVector = new Point3D(0,1,0);
@@ -353,7 +405,7 @@ public class RayTracer {
 		shapes.add(new Triangle(new Point3D(0, -0.5, 0.5), new Point3D(0, -0.5, -0.5), new Point3D(-1, 0.5, 0), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
 	}
 	
-	private void makeScene3(){
+	private void makeScene3(int frame){
 		Point3D lookAt = new Point3D(0,0,0);
 		Point3D eye = new Point3D(0, 0, 1.2);
 		Point3D upVector = new Point3D(0,1,0);
