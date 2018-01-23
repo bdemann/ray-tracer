@@ -23,7 +23,7 @@ public class RayTracer {
 	FileWriter fw = null;
 	
 	public static void main(String[] args){
-		boolean testImages = false;
+		boolean testImages = true;
 		System.out.println("Starting Ray Tracer");
 		if(testImages){
 			for(int i = 0; i < 4; i++){

@@ -1,6 +1,6 @@
 package rayTracer;
 
-import javafx.geometry.Point3D;
+import rayTracer.geo.Point3D;
 
 public class Camera {
 	
