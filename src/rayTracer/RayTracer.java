@@ -77,7 +77,7 @@ public class RayTracer {
 	
 	public void traceImage(String fileName){
 
-		boolean skipTracing = true;
+		boolean skipTracing = false;
 		if(skipTracing) {
 			return;
 		}
@@ -328,8 +328,8 @@ public class RayTracer {
 		double xPos = radius * Math.cos(Math.toRadians(frame));
 		double zPos = radius * Math.sin(Math.toRadians(frame));
 		
-		Point3D lookAt = new Point3D(0,0,0);
-		Point3D eye = new Point3D(xPos, 0, zPos);
+		Point3D lookAt = new Point3D(xPos,0, 1 - zPos);
+		Point3D eye = new Point3D(0, 0, 1);
 		Point3D upVector = new Point3D(0,1,0);
 		int width = 900;
 		cam = new Camera(eye, lookAt, upVector, width, (int)(width*(9.0/16.0)), 54);
@@ -340,9 +340,9 @@ public class RayTracer {
 		backgroundColor = new Color(0.2, 0.2, 0.2);
 
 		shapes = new ArrayList<Shape>();
-//		shapes.add(new Sphere(new Point3D(0.35, 0, -0.1), 0.05, Shape.DIFFUSE, new Color(1,1,1), new Color(1,1,1), 4));
-//		shapes.add(new Sphere(new Point3D(0.2, 0, -0.1), 0.075, Shape.DIFFUSE, new Color(1,0,0), new Color(.5,1,.5), 32));
-//		shapes.add(new Sphere(new Point3D(-0.6, 0, 0), 0.3, Shape.DIFFUSE, new Color(0,1,0), new Color(.5,1,.5), 32));
+		shapes.add(new Sphere(new Point3D(0.35, 0, -0.1), 0.05, Shape.DIFFUSE, new Color(1,1,1), new Color(1,1,1), 4));
+		shapes.add(new Sphere(new Point3D(0.2, 0, -0.1), 0.075, Shape.DIFFUSE, new Color(1,0,0), new Color(.5,1,.5), 32));
+		shapes.add(new Sphere(new Point3D(-0.6, 0, 0), 0.3, Shape.DIFFUSE, new Color(0,1,0), new Color(.5,1,.5), 32));
 		shapes.add(new Triangle(new Point3D(0.3, -0.3, -0.4), new Point3D(0, 0.3, -0.1), new Point3D(-0.3, -0.3, 0.2), Shape.DIFFUSE, new Color(0,0,1), new Color(1,1,1), 32));
 		shapes.add(new Triangle(new Point3D(-0.2, 0.1, 0.1), new Point3D(-0.2, -0.5, 0.2), new Point3D(-0.2, 0.1, -0.3), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
 	}
