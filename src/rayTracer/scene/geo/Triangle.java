@@ -13,6 +13,29 @@ public class Triangle extends Shape {
 		this.a = a.multiply(1);
 		this.b = b.multiply(1);
 		this.c = c.multiply(1);
+		if(type != DIFFUSE){
+			System.out.println("Warning you aren't doing the constructor you think you are. Diffuse");
+		}
+	}
+	
+	public Triangle(Point3D a, Point3D b, Point3D c, int type, Color reflectInt){
+		super(type, reflectInt);
+		this.a = a.multiply(1);
+		this.b = b.multiply(1);
+		this.c = c.multiply(1);
+		if(type != REFLECTIVE){
+			System.out.println("Warning you aren't doing the constructor you think you are. Reflective");
+		}
+	}
+	
+	public Triangle(Point3D a, Point3D b, Point3D c, int type, Color color, double indexOfRefraction){
+		super(type, color, indexOfRefraction);
+		this.a = a.multiply(1);
+		this.b = b.multiply(1);
+		this.c = c.multiply(1);
+		if(type != TRANSPARENT){
+			System.out.println("Warning you aren't doing the constructor you think you are. Transparent");
+		}
 	}
 	
 	private double distanceToOrigin(){

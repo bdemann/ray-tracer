@@ -1,8 +1,5 @@
 package rayTracer.scene.geo;
 
-import java.io.FileWriter;
-import java.io.IOException;
-
 import rayTracer.scene.shaders.Color;
 
 public class Sphere extends Shape {
@@ -163,7 +160,28 @@ public class Sphere extends Shape {
 	}
 	
 	public String toString(){
-		return "Sphere" + type + "";
+		String colorName;
+		double red = this.color.getRed();
+		double green = this.color.getGreen();
+		double blue = this.color.getBlue();
+		if(red == 1 && green == 1 && blue == 1) {
+			colorName = "white";
+		} else if(red == 1 && green == 0 && blue == 1) {
+			colorName = "magenta";
+		} else if(red == 0 && green == 1 && blue == 1) {
+			colorName = "cyan";
+		} else if(red == 0 && green == 0 && blue == 1) {
+			colorName = "blue";
+		} else if(red == 0 && green == 1 && blue == 0) {
+			colorName = "green";
+		} else if(red == 1 && green == 0 && blue == 0) {
+			colorName = "red";
+		} else if(red == 1 && green == 1 && blue == 0) {
+			colorName = "yellow";
+		} else {
+			colorName = "black";
+		}
+		return "Sphere " + center + " " + colorName;
 	}
 
 	@Override

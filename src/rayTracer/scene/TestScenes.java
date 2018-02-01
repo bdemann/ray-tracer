@@ -13,33 +13,149 @@ public class TestScenes {
 	private Scene testScene;
 	
 	public TestScenes(int scene){
-		testScene = new Scene();
 
-		int frame = 0;
+//		int frame = 0;
+//		setUpScene(scene, frame);
+	}
+	private void setUpScene(int scene, int frame){
+
+		testScene = new Scene();
 		
 		switch(scene){
 		case 0:
 			makeTestScene(frame);
 			break;
 		case 1:
-			makeScene1(frame);
+			triangleSpheresInLine(frame);
 			break;
 		case 2:
-			makeScene2(frame);
+			trianglesInReflection(frame);
 			break;
 		case 3:
-			makeScene3(frame);
+			spheresInRefraction(frame);
 			break;
 		case 4:
-			makeScene(frame);
+			tetrahedralSpheres(frame);
 			break;
 		case 5:
-			makeScene5(frame);
+			justTrianglesInLine(frame);
+			break;
+		case 6:
+			refractionPlane(frame);
+			break;
+		case 7:
+			spheres(frame);
 			break;
 		default:
 			makeTestScene(frame);
 		}
 	}
+	
+	public void refractionTriangle(int frame){
+		double radius = 2;
+		double xPos = radius * Math.cos(Math.toRadians(frame));
+		double zPos = radius * Math.sin(Math.toRadians(frame));
+		
+		Point3D lookAt = new Point3D(0,0,0);
+		Point3D eye = new Point3D(xPos, 0, zPos);
+		Point3D upVector = new Point3D(0,1,0);
+		int width = 300;
+		System.out.print("This is the eye location at frame ");
+		System.out.print(frame);
+		System.out.println(eye);
+		testScene.addCamera(new Camera(eye, lookAt, upVector, width, (int)(width*(9.0/16.0)), 54));
+		
+		Color cl = new Color(1,1,1);
+		Point3D lightDir = new Point3D(1,0,0);		
+		Color ambientColor = new Color(0.1,0.1,0.1);
+		testScene.setBackgroundColor(new Color(0.2, 0.2, 0.2));
+		testScene.addLight(new DirectionalLight(cl, lightDir));
+		testScene.setAmbient(new AmbientLight(ambientColor));
+
+		testScene.addShape(new Sphere(new Point3D(0.35, 0, -0.1), 0.05, Shape.DIFFUSE, new Color(1,1,1), new Color(1,1,1), 4));
+		testScene.addShape(new Sphere(new Point3D(0.2, 0, -0.1), 0.075, Shape.DIFFUSE, new Color(1,0,0), new Color(.5,1,.5), 32));
+		testScene.addShape(new Sphere(new Point3D(-0.6, 0, 0), 0.3, Shape.REFLECTIVE, new Color(0,1,0)));
+		testScene.addShape(new Triangle(new Point3D(0.3, -0.3, -0.4), new Point3D(0, 0.3, -0.1), new Point3D(-0.3, -0.3, 0.2), Shape.TRANSPARENT, new Color(0,0,1), 1.5));
+		testScene.addShape(new Triangle(new Point3D(-0.2, 0.1, 0.1), new Point3D(-0.2, -0.5, 0.2), new Point3D(-0.2, 0.1, -0.3), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
+	}
+	
+	public void refractionPlane(int frame){
+		double radius = 2;
+		double xPos = radius * Math.cos(5 * Math.toRadians(frame));
+		double zPos = radius * Math.sin(5 * Math.toRadians(frame));
+		
+		Point3D lookAt = new Point3D(0,0,0);
+		Point3D eye = new Point3D(xPos, 0, zPos);
+		Point3D upVector = new Point3D(0,1,0);
+		int width = 300;
+		System.out.print("This is the eye location at frame ");
+		System.out.print(frame);
+		System.out.println(eye);
+		testScene.addCamera(new Camera(eye, lookAt, upVector, width, (int)(width*(9.0/16.0)), 60));
+		
+		Color cl = new Color(1,1,1);
+		Point3D lightDir = new Point3D(1,0,0);		
+		Color ambientColor = new Color(0.1,0.1,0.1);
+		testScene.setBackgroundColor(new Color(0.2, 0.2, 0.2));
+		testScene.addLight(new DirectionalLight(cl, lightDir));
+		testScene.setAmbient(new AmbientLight(ambientColor));
+
+		double x = 0.6;
+		double y = 0.6;
+		double z = 0;
+		double rad = 0.075;
+		
+		//Spheres on the rectangle and set back a little bit
+		testScene.addShape(new Sphere(new Point3D(x, 0, rad), rad, Shape.DIFFUSE, new Color(0,0,1), new Color(.5,1,.5), 32));
+		testScene.addShape(new Sphere(new Point3D(-x, 0, -rad), rad, Shape.DIFFUSE, new Color(1,1,0), new Color(.5,1,.5), 32));
+		
+		//Spheres in the back and the front
+		testScene.addShape(new Sphere(new Point3D(0, 0, 1), rad, Shape.DIFFUSE, new Color(1,0,0), new Color(.5,1,.5), 32));
+		testScene.addShape(new Sphere(new Point3D(0, 0, -1), rad, Shape.DIFFUSE, new Color(0,1,0), new Color(.5,1,.5), 32));
+		testScene.addShape(new Triangle(new Point3D(x, y, z), new Point3D(-x, -y, z), new Point3D(-x, y, z), Shape.TRANSPARENT, new Color(0,0,1), 1.5));
+		testScene.addShape(new Triangle(new Point3D(x, y, z), new Point3D(-x, -y, z), new Point3D(x, -y, z), Shape.TRANSPARENT, new Color(0,0,1), 1.5));
+//		testScene.addShape(new Sphere(new Point3D(0, 0, 0), x, Shape.DIFFUSE, new Color(0,1,1), new Color(.5,1,.5), 32));
+//		testScene.addShape(new Triangle(new Point3D(x, y, z), new Point3D(-x, -y, z), new Point3D(-x, y, z), Shape.DIFFUSE, new Color(0,0,1), new Color(.5,1,.5), 15));
+//		testScene.addShape(new Triangle(new Point3D(x, y, z), new Point3D(-x, -y, z), new Point3D(x, -y, z), Shape.DIFFUSE, new Color(0,0,1), new Color(.5,1,.5), 15));
+	}
+	
+	public void spheres(int frame){
+		double radius = 2;
+		double xPos = radius * Math.cos(Math.toRadians(frame));
+		double zPos = radius * Math.sin(Math.toRadians(frame));
+		
+		Point3D lookAt = new Point3D(0,0,0);
+		Point3D eye = new Point3D(xPos, 0, zPos);
+		Point3D upVector = new Point3D(0,1,0);
+		int width = 300;
+		System.out.print("This is the eye location at frame ");
+		System.out.print(frame);
+		System.out.println(eye);
+		testScene.addCamera(new Camera(eye, lookAt, upVector, width, (int)(width*(9.0/16.0)), 60));
+		
+		Color cl = new Color(1,1,1);
+		Point3D lightDir = new Point3D(1,0,0);		
+		Color ambientColor = new Color(0.1,0.1,0.1);
+		testScene.setBackgroundColor(new Color(0.2, 0.2, 0.2));
+		testScene.addLight(new DirectionalLight(cl, lightDir));
+		testScene.setAmbient(new AmbientLight(ambientColor));
+
+		double x = 0.6;
+		double y = 0.6;
+		double z = 0;
+		double rad = 0.075;
+		double dia = rad * 2;
+		
+		//Spheres on the rectangle and set back a little bit
+		testScene.addShape(new Sphere(new Point3D(0, 0, 0), rad, Shape.DIFFUSE, new Color(0,0,1), new Color(.5,1,.5), 32));
+		testScene.addShape(new Sphere(new Point3D(dia, 0, 0), rad, Shape.DIFFUSE, new Color(0,1,0), new Color(.5,1,.5), 32));
+		testScene.addShape(new Sphere(new Point3D(-dia, 0, 0), rad, Shape.DIFFUSE, new Color(1,0,0), new Color(.5,1,.5), 32));
+		testScene.addShape(new Sphere(new Point3D(0, dia, 0), rad, Shape.DIFFUSE, new Color(0,1,1), new Color(.5,1,.5), 32));
+		testScene.addShape(new Sphere(new Point3D(0, -dia, 0), rad, Shape.DIFFUSE, new Color(1,0,1), new Color(.5,1,.5), 32));
+		testScene.addShape(new Sphere(new Point3D(0, 0, dia), rad, Shape.DIFFUSE, new Color(1,1,0), new Color(.5,1,.5), 32));
+		testScene.addShape(new Sphere(new Point3D(0, 0, -dia), rad, Shape.DIFFUSE, new Color(1,1,1), new Color(.5,1,.5), 32));
+	}
+	
 	
 	public void makeTestScene(int frame){
 		Point3D eye = new Point3D(0, 0, 1.2);
@@ -68,7 +184,7 @@ public class TestScenes {
 //		shapes.add(new Sphere(new Point3D(-0.5, 0, 0), .05, Shape.DIFFUSE, new Color(0,0,1), new Color(1,1,1), 32));
 	}
 	
-	private void makeScene1(int frame){
+	private void triangleSpheresInLine(int frame){
 		double radius = 2;
 		double xPos = radius * Math.cos(Math.toRadians(frame));
 		double zPos = radius * Math.sin(Math.toRadians(frame));
@@ -76,7 +192,7 @@ public class TestScenes {
 		Point3D lookAt = new Point3D(0,0,0);
 		Point3D eye = new Point3D(xPos, 0, zPos);
 		Point3D upVector = new Point3D(0,1,0);
-		int width = 900;
+		int width = 300;
 		System.out.print("This is the eye location at frame ");
 		System.out.print(frame);
 		System.out.println(eye);
@@ -96,7 +212,7 @@ public class TestScenes {
 		testScene.addShape(new Triangle(new Point3D(-0.2, 0.1, 0.1), new Point3D(-0.2, -0.5, 0.2), new Point3D(-0.2, 0.1, -0.3), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
 	}
 	
-	private void makeScene5(int frame){
+	private void justTrianglesInLine(int frame){
 		double radius = 2;
 		double xPos = radius * Math.cos(Math.toRadians(frame));
 		double zPos = radius * Math.sin(Math.toRadians(frame));
@@ -122,7 +238,7 @@ public class TestScenes {
 		testScene.addShape(new Triangle(new Point3D(-0.2, 0.1, 0.1), new Point3D(-0.2, -0.5, 0.2), new Point3D(-0.2, 0.1, -0.3), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
 	}
 	
-	private void makeScene(int frame){
+	private void tetrahedralSpheres(int frame){
 		double radius = 2;
 		double xPos = radius * Math.cos(Math.toRadians(frame));
 		double zPos = radius * Math.sin(Math.toRadians(frame));
@@ -164,7 +280,7 @@ public class TestScenes {
 //		shapes.add(new Triangle(new Point3D(-0.2, 0.1, 0.1), new Point3D(-0.2, -0.5, 0.2), new Point3D(-0.2, 0.1, -0.3), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
 	}
 	
-	private void makeScene2(int frame){
+	private void trianglesInReflection(int frame){
 		Point3D lookAt = new Point3D(0,0,0);
 		Point3D eye = new Point3D(0, 0, 1.2);
 		Point3D upVector = new Point3D(0,1,0);
@@ -184,7 +300,7 @@ public class TestScenes {
 		testScene.addShape(new Triangle(new Point3D(0, -0.5, 0.5), new Point3D(0, -0.5, -0.5), new Point3D(-1, 0.5, 0), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
 	}
 	
-	private void makeScene3(int frame){
+	private void spheresInRefraction(int frame){
 		Point3D lookAt = new Point3D(0,0,0);
 		Point3D eye = new Point3D(0, 0, 1.2);
 		Point3D upVector = new Point3D(0,1,0);
@@ -205,7 +321,8 @@ public class TestScenes {
 		testScene.addShape(new Sphere(new Point3D(0.25, -0.25, -0.6), 0.1161, Shape.DIFFUSE, new Color(0,1,0), new Color(0,0,0), 4));
 	}
 
-	public Scene getTestScene() {
+	public Scene getTestScene(int scene, int frame) {
+		setUpScene(scene, frame);
 		return testScene;
 	}
 }

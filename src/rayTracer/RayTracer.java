@@ -11,6 +11,7 @@ import rayTracer.scene.TestScenes;
 import rayTracer.scene.geo.Point3D;
 import rayTracer.scene.geo.Ray3D;
 import rayTracer.scene.geo.Shape;
+import rayTracer.scene.geo.Sphere;
 import rayTracer.scene.lights.AmbientLight;
 import rayTracer.scene.lights.Light;
 import rayTracer.scene.shaders.Color;
@@ -19,20 +20,21 @@ public class RayTracer {
 	private static final int MAX_DEPTH = 10;
 	private int maxDepth;
 	Scene scene;
+	private double indexOfRefraction = 1.0003;
 
 	FileWriter fw = null;
 	
 	public static void main(String[] args){
-		boolean testImages = true;
+		boolean testImages = false;
 		System.out.println("Starting Ray Tracer");
 		if(testImages){
-			for(int i = 0; i < 4; i++){
+			for(int i = 0; i < 8; i++){
 				new RayTracer(i, 1).traceImage("./results/image" + i + ".png");
 				System.out.println("Finished image " + i);
 			}
 		} else {
-			for(int frame = 0; frame < 360; frame++){
-				int sceneNumber = 1;
+			for(int frame = 0; frame < 72; frame++){
+				int sceneNumber = 6;
 				String path = String.format("./results/turnAround/%d/", sceneNumber);
 				File dir = new File(path);
 				if(!dir.exists()) {
@@ -50,7 +52,7 @@ public class RayTracer {
 	public RayTracer(int scene, int frame) {
 		maxDepth = MAX_DEPTH;
 		TestScenes tests = new TestScenes(scene);
-		this.scene = tests.getTestScene();
+		this.scene = tests.getTestScene(scene, frame);
 	}
 	
 	public void traceImage(String fileName){
@@ -72,9 +74,6 @@ public class RayTracer {
 		int height = cam.getHeight();
 		for(int i = 0; i < width; i++){ 		//For each row
 			for(int j = 0; j < height; j++){	//For each pixel in the row
-				if(i == 345 && j == 245){
-					System.out.println("Start a breakpoint");
-				}
 				//Calculate ray
 				Point3D pixelCenter = cam.getPixelCenter(i, j, true);
 				//System.out.println("Pixel: (" + i + "," + j + "). Pixel Center is at: " + pixelCenter);
@@ -106,9 +105,16 @@ public class RayTracer {
 			Point3D intersect = shapes.get(i).intersect(ray);
 			if(intersect == null){
 				continue;
-			} else if(in.intersectionPoint == null || intersect.getZ() > in.intersectionPoint.getZ()){
+			} else if(in.intersectionPoint == null){
 				in.intersectedShape = shapes.get(i);
 				in.intersectionPoint = intersect;
+			} else {
+				double newDistance = ray.getOrigin().distance(intersect);
+				double oldDistance = ray.getOrigin().distance(in.intersectionPoint);
+				if(newDistance < oldDistance) {
+					in.intersectedShape = shapes.get(i);
+					in.intersectionPoint = intersect;
+				}
 			}
 		}
 		
@@ -179,7 +185,12 @@ public class RayTracer {
 			diffuse = diffuse.add(reflect.multiply(target.getReflectInt()));
 		} else if(target.getType() == Shape.TRANSPARENT){
 			Point3D refract = refract(ray, target.getIndexOfRefraction(),n);
-			diffuse = traceRay(new Ray3D(launchPoint, refract), depth + 1);
+			launchPoint = closest.add(n.multiply(-0.00001));
+			Ray3D refractedRay = new Ray3D(launchPoint, refract);
+			if (target instanceof Sphere) {
+				indexOfRefraction = target.getIndexOfRefraction();
+			}
+			diffuse = traceRay(refractedRay, depth + 1);
 		}
 		
 		if(shadow && target.getType() != Shape.REFLECTIVE){
@@ -206,19 +217,50 @@ public class RayTracer {
 	}
 
 	private Point3D refract(Ray3D ray, double indexOfRefraction, Point3D normal) {
-		double ni = ray.indexOfRefraction;
-		double nt = indexOfRefraction;
-		//angle = acos(v1�v2)
-		Point3D rd = ray.getDirection().normalize();
-		Point3D n = normal.normalize();
-		double theta = Math.acos(n.dotProduct(rd));
-		double sinPhi = (ni * Math.sin(theta))/nt;
-		double phi = Math.asin(sinPhi);
+//		double ni = ray.indexOfRefraction;
+//		double nt = indexOfRefraction;
+//		//angle = acos(v1�v2)
+//		Point3D rd = ray.getDirection().normalize();
+//		Point3D n = normal.normalize();
+//		double theta = Math.acos(n.dotProduct(rd));
+//		double sinPhi = (ni * Math.sin(theta))/nt;
+//		double phi = Math.asin(sinPhi);
+//		
+//		double sin = Math.pow(ni/nt, 2) + (1 + Math.pow(Math.cos(theta), 2));
+//		Point3D t = rd.multiply(ni/nt).subtract(normal.multiply((ni/nt) * Math.cos(theta) + Math.sqrt(1-sin)));
+
+		// I = incoming vector
+		// T = outgoing vector
+		// N = normal
+		// theta = angle between I and N
+		// phi = angle between T and N
+		// n1 = index of refraction of material 1
+		// n2 = index of refraction of material 2
+		// n = n2/n1 = sin(theta)/sin(phi)
+		// c = cos(theta)
+		// T = n * I + (n + c - sqrt(1 + n^2 * (c^2 - 1))) * N
+		//Break it up for readability
+		// vector1 = n * I
+		// s = sqrt(1 + n^2 * (c^2 - 1))
+		// scalar1 = n + c - s
+		// vector2 = scalar1 * N
+		// T = vector1 + vector2
+		Point3D I = ray.getDirection().subtract(ray.getOrigin());
+		Point3D T = null;
+		Point3D N = normal;
+		double theta = I.getAngle(N);
+		double n1 = this.indexOfRefraction;
+		double n2 = indexOfRefraction;
+		double n = n2/n1;
+		double c = Math.cos(theta);
 		
-		double sin = Math.pow(ni/nt, 2) + (1 + Math.pow(Math.cos(theta), 2));
-		Point3D t = rd.multiply(ni/nt).subtract(normal.multiply((ni/nt) * Math.cos(theta) + Math.sqrt(1-sin)));
-		
-		return ray.getDirection();
+		Point3D vector1 = I.multiply(n);
+		double s = Math.sqrt(1 + Math.pow(n, 1) * (Math.pow(c, 1) + 1) );
+		double scalar1 = n + c - s;
+		Point3D vector2 = N.multiply(scalar1);
+		T = vector1.add(vector2);
+				
+		return T;
 	}
 
 	private boolean inShadow(Ray3D ray) {

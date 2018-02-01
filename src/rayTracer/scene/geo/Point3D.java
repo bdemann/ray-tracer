@@ -71,4 +71,14 @@ public class Point3D {
 		return String.format("(%f,%f,%f)", this._x, this._y, this._z);
 	}
 
+	public double getAngle(Point3D b) {
+		// When A and B are normalized
+		// A dot B = cos(theta)
+		return Math.acos(this.normalize().dotProduct(b.normalize()));
+	}
+
+	public double distance(Point3D b) {
+		return this.subtract(b).magnitude();
+	}
+
 }
