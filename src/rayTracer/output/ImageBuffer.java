@@ -1,10 +1,12 @@
-package rayTracer;
+package rayTracer.output;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
+
+import rayTracer.scene.shaders.Color;
 
 public class ImageBuffer {
 	
@@ -46,7 +48,7 @@ public class ImageBuffer {
 		return image.getHeight();
 	}
 
-	public void setColor(int x, int y, rayTracer.Color c) {
+	public void setColor(int x, int y, rayTracer.scene.shaders.Color c) {
 		java.awt.Color color = c.toJColor();
 		image.setRGB(x, y, color.getRGB());
 	}

@@ -1,4 +1,4 @@
-package rayTracer.geo;
+package rayTracer.scene.geo;
 
 public class Ray3D {
 

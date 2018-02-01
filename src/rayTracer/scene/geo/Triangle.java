@@ -1,6 +1,6 @@
-package rayTracer.geo;
+package rayTracer.scene.geo;
 
-import rayTracer.Color;
+import rayTracer.scene.shaders.Color;
 
 public class Triangle extends Shape {
 

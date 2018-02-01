@@ -1,6 +1,8 @@
-package rayTracer;
+package rayTracer.scene;
 
-import rayTracer.geo.Point3D;
+import rayTracer.output.ImageBuffer;
+import rayTracer.scene.geo.Point3D;
+import rayTracer.scene.shaders.Color;
 
 public class Camera {
 	

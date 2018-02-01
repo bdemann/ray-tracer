@@ -3,28 +3,27 @@ package rayTracer;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.List;
 
-import rayTracer.geo.Point3D;
-import rayTracer.geo.Ray3D;
-import rayTracer.geo.Shape;
-import rayTracer.geo.Sphere;
-import rayTracer.geo.Triangle;
+import rayTracer.scene.Camera;
+import rayTracer.scene.Scene;
+import rayTracer.scene.TestScenes;
+import rayTracer.scene.geo.Point3D;
+import rayTracer.scene.geo.Ray3D;
+import rayTracer.scene.geo.Shape;
+import rayTracer.scene.lights.AmbientLight;
+import rayTracer.scene.lights.Light;
+import rayTracer.scene.shaders.Color;
 
 public class RayTracer {
 	private static final int MAX_DEPTH = 10;
 	private int maxDepth;
-	private ArrayList<Shape> shapes;
-	private Color backgroundColor;
-	private Color ambient;
-	private Color cl;
-	private Point3D lightDir;
-	private Camera cam;
+	Scene scene;
 
 	FileWriter fw = null;
 	
 	public static void main(String[] args){
-		boolean testImages = false;
+		boolean testImages = true;
 		System.out.println("Starting Ray Tracer");
 		if(testImages){
 			for(int i = 0; i < 4; i++){
@@ -49,34 +48,15 @@ public class RayTracer {
 	}
 	
 	public RayTracer(int scene, int frame) {
-		switch(scene){
-		case 0:
-			makeTestScene(frame);
-			break;
-		case 1:
-			makeScene1(frame);
-			break;
-		case 2:
-			makeScene2(frame);
-			break;
-		case 3:
-			makeScene3(frame);
-			break;
-		case 4:
-			makeScene(frame);
-			break;
-		case 5:
-			makeScene5(frame);
-			break;
-		default:
-			makeTestScene(frame);
-		}
-		
 		maxDepth = MAX_DEPTH;
+		TestScenes tests = new TestScenes(scene);
+		this.scene = tests.getTestScene();
 	}
 	
 	public void traceImage(String fileName){
 
+		Camera cam = scene.getCamera(0);
+		
 		boolean skipTracing = false;
 		if(skipTracing) {
 			return;
@@ -100,7 +80,7 @@ public class RayTracer {
 				//System.out.println("Pixel: (" + i + "," + j + "). Pixel Center is at: " + pixelCenter);
 				Point3D eye = cam.getCenterOfProjection();
 				Ray3D primaryRay = new Ray3D(eye, pixelCenter.subtract(eye));
-				Color c = tracePixel(primaryRay, 0);
+				Color c = traceRay(primaryRay, 0);
 				cam.captureColor(i,j,c);
 			}
 		}
@@ -113,118 +93,106 @@ public class RayTracer {
 		cam.save(fileName);
 	}
 
-	public Color tracePixel(Ray3D ray, int depth){
-		if(depth >= maxDepth){
-			return backgroundColor;
-		}
-		
+	private class Intersection {
+		public Shape intersectedShape = null;
+		public Point3D intersectionPoint = null;
+	}
+	
+	private Intersection getClosetIntersection(List<Shape> shapes, Ray3D ray){
 		//Figure out what object was hit
-		Shape target = null;
-		Point3D closest = null;
+		Intersection in = new Intersection();
 		
 		for(int i = 0; i < shapes.size(); i++){
 			Point3D intersect = shapes.get(i).intersect(ray);
 			if(intersect == null){
 				continue;
-			} else if(closest == null || intersect.getZ() > closest.getZ()){
-				target = shapes.get(i);
-				closest = intersect;
+			} else if(in.intersectionPoint == null || intersect.getZ() > in.intersectionPoint.getZ()){
+				in.intersectedShape = shapes.get(i);
+				in.intersectionPoint = intersect;
 			}
 		}
 		
-		if(target == null){ //doesn't hit anything.
-			return backgroundColor;
-		}
+		return in;
+	}
+	
+	private Color getPhongContribution(Shape target, Point3D point, List<Light> lights, AmbientLight ambientLight){
+		Point3D n = target.getNormal(point).normalize();
+		Color diffuse = target.getDiffuse();
 
+		Color ambient = ambientLight.getColor();
+		Color cl = lights.get(0).getColor();
+		Point3D l = lights.get(0).getCenter();
+		Point3D e = (scene.getCamera(0).getCenterOfProjection().subtract(point)).normalize();
+		double nDotL = n.dotProduct(l);
+		Point3D r = ((n.multiply(2).multiply(nDotL)).subtract(l)).normalize();
+		Color cp = target.getSpec();
+		
+		//cl*cp*max(0,eDotR)^p
+		diffuse = diffuse.multiply(ambient.add(cl.multiply(Math.max(0,nDotL))));
+		diffuse = diffuse.add(cl.multiply(cp.multiply(Math.pow(Math.max(0, e.dotProduct(r)), target.getPhongConst()))));
+
+		return diffuse;
+	}
+	
+	public Color traceRay(Ray3D ray, int depth){
+		if(depth >= maxDepth){
+			return scene.getBackgroundColor();
+		}
+		
+		List<Shape> shapes = scene.getShapes();
+		Light light = scene.getLight(0);
+		AmbientLight ambientLight = scene.getAmbientLight();
+		
+		Intersection in = getClosetIntersection(shapes, ray);
+		Shape target = in.intersectedShape;
+		Point3D closest = in.intersectionPoint;
+		if(target == null){ //doesn't hit anything.
+			return scene.getBackgroundColor();
+		}
+		
 		try {
 			fw.append("addpoint(geoself(), set(");
-			fw.append(closest.getX() + "," + closest.getY() + "," + closest.getZ());
+			fw.append(in.intersectionPoint.getX() + "," + in.intersectionPoint.getY() + "," + in.intersectionPoint.getZ());
 			fw.append("));\n");
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
+		
 		Point3D n = target.getNormal(closest).normalize();
 		//calculate launch point of new ray
 		Point3D launchPoint = closest.add(n.multiply(0.00001));
 		
+		Ray3D rayToLight = rayToLight(launchPoint, light);
+		
 		//figure out if in shadow
-		boolean shadow = inShadow(new Ray3D(launchPoint, lightDir));
+		boolean shadow = inShadow(rayToLight);
 		
 		
 		Color diffuse = target.getDiffuse();
-		double red = diffuse.getRed();
-		double green = diffuse.getGreen();
-		double blue = diffuse.getBlue();
 		
 		if(target.getType() == Shape.DIFFUSE){
-			Point3D l = lightDir;
-			Point3D e = (cam.getCenterOfProjection().subtract(closest)).normalize();
-			double nDotL = n.dotProduct(l);
-			Point3D r = ((n.multiply(2).multiply(nDotL)).subtract(l)).normalize();
-			Color cp = target.getSpec();
-			
-			//cl*cp*max(0,eDotR)^p
-			red *= (ambient.getRed() + cl.getRed() * Math.max(0,nDotL)); 
-			red += cl.getRed() * cp.getRed() * Math.pow(Math.max(0, e.dotProduct(r)), target.getPhongConst());
-			green *= (ambient.getGreen() + cl.getGreen() * Math.max(0,nDotL));
-			green += cl.getGreen() * cp.getGreen() * Math.pow(Math.max(0, e.dotProduct(r)), target.getPhongConst());
-			blue *= (ambient.getBlue() + cl.getBlue() * Math.max(0,nDotL));
-			blue += cl.getBlue() * cp.getBlue() * Math.pow(Math.max(0, e.dotProduct(r)), target.getPhongConst());
-			
-			if(target instanceof Sphere && false){
-				red = (closest.subtract(((Sphere)target).getCenter()).magnitude()) / (((Sphere)target).getRadius() * 2);
-
-				red = Math.abs(closest.getZ() - ((Sphere)target).getCenter().getZ()) / (((Sphere)target).getRadius() * 2);
-				//System.out.println(red);
-				blue = red;
-				green = red;
-			}
+			diffuse = getPhongContribution(target, closest, scene.getLights(), ambientLight);
 		} else if(target.getType() == Shape.REFLECTIVE){
 			Point3D reflection = reflect(ray, n);
-			Color reflect = tracePixel(new Ray3D(launchPoint, reflection), depth + 1);
-			red += reflect.getRed() * (target.getReflectInt().getRed());
-			blue += reflect.getBlue() * (target.getReflectInt().getBlue());
-			green += reflect.getGreen() * (target.getReflectInt().getGreen());
+			Color reflect = traceRay(new Ray3D(launchPoint, reflection), depth + 1);
+			diffuse = diffuse.add(reflect.multiply(target.getReflectInt()));
 		} else if(target.getType() == Shape.TRANSPARENT){
 			Point3D refract = refract(ray, target.getIndexOfRefraction(),n);
-			Color transmission = tracePixel(new Ray3D(launchPoint, refract), depth + 1);
-			red = transmission.getRed();
-			green = transmission.getGreen();
-			blue = transmission.getBlue();
+			diffuse = traceRay(new Ray3D(launchPoint, refract), depth + 1);
 		}
 		
-		if(red > 1){
-			red = 1;
-		}
-		if(green > 1){
-			green = 1;
-		}
-		if(blue > 1){
-			blue = 1;
-		}
-
 		if(shadow && target.getType() != Shape.REFLECTIVE){
-			red = 0;
-			green = 0;
-			blue = 0;
+			diffuse = diffuse.blacken();
 		}
 		
-//		if(red < 0){
-//			red = 0;
-//		}
-//		if(green < 0){
-//			green = 0;
-//		}
-//		if(blue < 0){
-//			blue = 0;
-//		}
-		Color color = new Color(red, green, blue);
-		//color = diffuse;
-		//Color = ambient + diffuse + specular + shadow + reflectedColor + refractedColor
-
+		diffuse = diffuse.clipColor();
 		
-		return color;
+		return diffuse;
+	}
+
+	private Ray3D rayToLight(Point3D launchPoint, Light light) {
+		return new Ray3D(launchPoint, light.getCenter());
 	}
 
 	private Point3D reflect(Ray3D ray, Point3D n) {
@@ -258,6 +226,7 @@ public class RayTracer {
 		if(noShadow) {
 			return false;
 		}
+		List<Shape> shapes = scene.getShapes();
 		for(int i = 0; i < shapes.size(); i++){
 			Point3D intersect = shapes.get(i).intersect(ray);
 			if(intersect != null){
@@ -265,163 +234,5 @@ public class RayTracer {
 			}
 		}
 		return false;
-	}
-	
-	public void makeTestScene(int frame){
-		Point3D eye = new Point3D(0, 0, 1.2);
-		Point3D lookAt = new Point3D(0,0,0);
-		Point3D upVector = new Point3D(0,1,0);
-		cam = new Camera(eye, lookAt, upVector, 300, 300, 55);
-		
-		backgroundColor = new Color(0.2, 0.2, 0.2);
-		shapes = new ArrayList<Shape>();
-		
-		ambient = new Color(0,0,0);
-		cl = new Color(1,1,1);
-		lightDir = new Point3D(0,0,1);
-		
-		Color sphereColor = new Color(0.0, 0.75, 0.75);
-		Color sphereColor2 = new Color(0.0, 0, 0.75);
-		Color sphereColor3 = new Color(1, 0, 0);
-		double radius = .5;
-		double radius2 = .05;
-		shapes.add(new Sphere(new Point3D(0, 0, 0), radius, Shape.REFLECTIVE, sphereColor));
-		shapes.add(new Sphere(new Point3D(0.1, 0.1, 0.5), radius2, Shape.DIFFUSE, sphereColor2, new Color(1,1,1), 32));
-		shapes.add(new Sphere(new Point3D(-0.1, -0.1, 0.6), radius2, Shape.DIFFUSE, sphereColor3, new Color(1,1,1), 32));
-		shapes.add(new Sphere(new Point3D(-.1, .15, .7), .05, Shape.DIFFUSE, new Color(0,1,0), new Color(1,1,1), 32));
-		shapes.add(new Triangle(new Point3D(0, 0.2, 0), new Point3D(0.2, 0.2, 0), new Point3D(-0.2, -0.2, 0), Shape.DIFFUSE, new Color(1,0,0), new Color(1,1,1), 4));
-//		shapes.add(new Triangle(new Point3D(0, 0.5, 0), new Point3D(0.5, 0, 0), new Point3D(-0.5, 0, 0), Shape.DIFFUSE, new Color(1,0,0), new Color(1,1,1), 4));
-//		shapes.add(new Sphere(new Point3D(0, 0.5, 0), .05, Shape.DIFFUSE, new Color(1,0,0), new Color(1,1,1), 32));
-//		shapes.add(new Sphere(new Point3D(0.5, 0, 0), .05, Shape.DIFFUSE, new Color(0,1,0), new Color(1,1,1), 32));
-//		shapes.add(new Sphere(new Point3D(-0.5, 0, 0), .05, Shape.DIFFUSE, new Color(0,0,1), new Color(1,1,1), 32));
-	}
-	
-	private void makeScene1(int frame){
-		double radius = 2;
-		double xPos = radius * Math.cos(Math.toRadians(frame));
-		double zPos = radius * Math.sin(Math.toRadians(frame));
-		
-		Point3D lookAt = new Point3D(0,0,0);
-		Point3D eye = new Point3D(xPos, 0, zPos);
-		Point3D upVector = new Point3D(0,1,0);
-		int width = 900;
-		System.out.print("This is the eye location at frame ");
-		System.out.print(frame);
-		System.out.println(eye);
-		cam = new Camera(eye, lookAt, upVector, width, (int)(width*(9.0/16.0)), 54);
-		
-		cl = new Color(1,1,1);
-		lightDir = new Point3D(1,0,0);		
-		ambient = new Color(0.1,0.1,0.1);
-		backgroundColor = new Color(0.2, 0.2, 0.2);
-
-		shapes = new ArrayList<Shape>();
-		shapes.add(new Sphere(new Point3D(0.35, 0, -0.1), 0.05, Shape.DIFFUSE, new Color(1,1,1), new Color(1,1,1), 4));
-		shapes.add(new Sphere(new Point3D(0.2, 0, -0.1), 0.075, Shape.DIFFUSE, new Color(1,0,0), new Color(.5,1,.5), 32));
-		shapes.add(new Sphere(new Point3D(-0.6, 0, 0), 0.3, Shape.DIFFUSE, new Color(0,1,0), new Color(.5,1,.5), 32));
-		shapes.add(new Triangle(new Point3D(0.3, -0.3, -0.4), new Point3D(0, 0.3, -0.1), new Point3D(-0.3, -0.3, 0.2), Shape.DIFFUSE, new Color(0,0,1), new Color(1,1,1), 32));
-		shapes.add(new Triangle(new Point3D(-0.2, 0.1, 0.1), new Point3D(-0.2, -0.5, 0.2), new Point3D(-0.2, 0.1, -0.3), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
-	}
-	
-	private void makeScene5(int frame){
-		double radius = 2;
-		double xPos = radius * Math.cos(Math.toRadians(frame));
-		double zPos = radius * Math.sin(Math.toRadians(frame));
-		
-		Point3D lookAt = new Point3D(xPos,0, 1 - zPos);
-		Point3D eye = new Point3D(0, 0, 1);
-		Point3D upVector = new Point3D(0,1,0);
-		int width = 900;
-		cam = new Camera(eye, lookAt, upVector, width, (int)(width*(9.0/16.0)), 54);
-		
-		cl = new Color(1,1,1);
-		lightDir = new Point3D(1,0,0);		
-		ambient = new Color(0.1,0.1,0.1);
-		backgroundColor = new Color(0.2, 0.2, 0.2);
-
-		shapes = new ArrayList<Shape>();
-		shapes.add(new Sphere(new Point3D(0.35, 0, -0.1), 0.05, Shape.DIFFUSE, new Color(1,1,1), new Color(1,1,1), 4));
-		shapes.add(new Sphere(new Point3D(0.2, 0, -0.1), 0.075, Shape.DIFFUSE, new Color(1,0,0), new Color(.5,1,.5), 32));
-		shapes.add(new Sphere(new Point3D(-0.6, 0, 0), 0.3, Shape.DIFFUSE, new Color(0,1,0), new Color(.5,1,.5), 32));
-		shapes.add(new Triangle(new Point3D(0.3, -0.3, -0.4), new Point3D(0, 0.3, -0.1), new Point3D(-0.3, -0.3, 0.2), Shape.DIFFUSE, new Color(0,0,1), new Color(1,1,1), 32));
-		shapes.add(new Triangle(new Point3D(-0.2, 0.1, 0.1), new Point3D(-0.2, -0.5, 0.2), new Point3D(-0.2, 0.1, -0.3), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
-	}
-	
-	private void makeScene(int frame){
-		double radius = 2;
-		double xPos = radius * Math.cos(Math.toRadians(frame));
-		double zPos = radius * Math.sin(Math.toRadians(frame));
-		
-		Point3D lookAt = new Point3D(0,0,0);
-		Point3D eye = new Point3D(xPos, 0, zPos);
-		Point3D upVector = new Point3D(0,1,0);
-		int width = 900;
-		cam = new Camera(eye, lookAt, upVector, width, (int)(width*(9.0/16.0)), 54);
-		
-		cl = new Color(1,1,1);
-		lightDir = new Point3D(1,0,0);		
-		ambient = new Color(0.1,0.1,0.1);
-		backgroundColor = new Color(0.2, 0.2, 0.2);
-
-		double angle = Math.acos(1.0/3.0) - Math.toRadians(90);
-		double bottomAngle = Math.toRadians(120) - Math.toRadians(90);
-		
-		double largeRadius = 0.3;
-		double smallRadius = 0.05;
-		double legLen = largeRadius + smallRadius;
-		double yOffset = legLen * Math.sin(angle);
-		double xOffset = legLen * Math.cos(angle);
-		
-		double xOffsetBot = Math.sin(bottomAngle) * xOffset;
-		double zOffsetBot = Math.cos(bottomAngle) * xOffset;
-		
-		shapes = new ArrayList<Shape>();
-		shapes.add(new Sphere(new Point3D(0, 0, 0), largeRadius, Shape.DIFFUSE, new Color(1,1,1), new Color(1,1,1), 4));
-		shapes.add(new Sphere(new Point3D(0, legLen, 0), smallRadius, Shape.DIFFUSE, new Color(1,0,1), new Color(1,1,1), 4));
-		shapes.add(new Sphere(new Point3D(xOffset, yOffset, 0), smallRadius, Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
-		shapes.add(new Sphere(new Point3D(-xOffsetBot, yOffset, zOffsetBot), smallRadius, Shape.DIFFUSE, new Color(0,1,1), new Color(1,1,1), 4));
-		shapes.add(new Sphere(new Point3D(-xOffsetBot, yOffset, -zOffsetBot), smallRadius, Shape.DIFFUSE, new Color(1,0,0), new Color(1,1,1), 4));
-//		shapes.add(new Sphere(new Point3D(0, 0, -0.1), 0.075, Shape.DIFFUSE, new Color(1,0,0), new Color(.5,1,.5), 32));
-//		shapes.add(new Sphere(new Point3D(-0.6, 0, 0), 0.3, Shape.DIFFUSE, new Color(0,1,0), new Color(.5,1,.5), 32));
-//		shapes.add(new Triangle(new Point3D(0.3, -0.3, -0.4), new Point3D(0, 0.3, -0.1), new Point3D(-0.3, -0.3, 0.2), Shape.DIFFUSE, new Color(0,0,1), new Color(1,1,1), 32));
-//		shapes.add(new Triangle(new Point3D(-0.2, 0.1, 0.1), new Point3D(-0.2, -0.5, 0.2), new Point3D(-0.2, 0.1, -0.3), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
-	}
-	
-	private void makeScene2(int frame){
-		Point3D lookAt = new Point3D(0,0,0);
-		Point3D eye = new Point3D(0, 0, 1.2);
-		Point3D upVector = new Point3D(0,1,0);
-		cam = new Camera(eye, lookAt, upVector, 300, 300, 110);
-		
-		cl = new Color(1,1,1);
-		lightDir = new Point3D(0,1,0);		
-		ambient = new Color(0,0,0);
-		backgroundColor = new Color(0.2, 0.2, 0.2);
-
-		shapes = new ArrayList<Shape>();
-		shapes.add(new Sphere(new Point3D(0, 0.3, 0), 0.2, Shape.REFLECTIVE, new Color(0.75,0.75,0.75)));
-		//shapes.add(new Sphere(new Point3D(0, 0.3, 0), 0.2, Shape.DIFFUSE, new Color(0.75,0.75,0.75), new Color(1,1,1), 4));
-		shapes.add(new Triangle(new Point3D(0, -0.5, 0.5), new Point3D(1, 0.5, 0), new Point3D(0, -0.5, -0.5), Shape.DIFFUSE, new Color(0,0,1), new Color(1,1,1), 4));
-		shapes.add(new Triangle(new Point3D(0, -0.5, 0.5), new Point3D(0, -0.5, -0.5), new Point3D(-1, 0.5, 0), Shape.DIFFUSE, new Color(1,1,0), new Color(1,1,1), 4));
-	}
-	
-	private void makeScene3(int frame){
-		Point3D lookAt = new Point3D(0,0,0);
-		Point3D eye = new Point3D(0, 0, 1.2);
-		Point3D upVector = new Point3D(0,1,0);
-		cam = new Camera(eye, lookAt, upVector, 300, 300, 35);
-		
-		cl = new Color(1,1,1);
-		lightDir = new Point3D(0,0,1);		
-		ambient = new Color(0,0,0);
-		backgroundColor = new Color(0.2, 0.2, 0.2);
-
-		shapes = new ArrayList<Shape>();
-		
-		shapes.add(new Sphere(new Point3D(0,0,0), 0.2322, Shape.TRANSPARENT, new Color(1,1,1), 1.3));
-		shapes.add(new Sphere(new Point3D(0.25, 0.25, -0.6), 0.1161, Shape.DIFFUSE, new Color(1,1,0), new Color(0,0,0), 4));
-		shapes.add(new Sphere(new Point3D(-0.25, 0.25, -0.6), 0.1161, Shape.DIFFUSE, new Color(1,0,0), new Color(0,0,0), 4));
-		shapes.add(new Sphere(new Point3D(-0.25, -0.25, -0.6), 0.1161, Shape.DIFFUSE, new Color(0,0,1), new Color(0,0,0), 4));
-		shapes.add(new Sphere(new Point3D(0.25, -0.25, -0.6), 0.1161, Shape.DIFFUSE, new Color(0,1,0), new Color(0,0,0), 4));
 	}
 }
