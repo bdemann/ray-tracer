@@ -77,6 +77,10 @@ public class Color {
 		return new Color(0,0,0);
 	}
 	
+	public Color darkenGood() {
+		return new Color(0.5,0.5,0.5);
+	}
+	
 	public Color clipColor(){
 		double red = this.red;
 		double green = this.green;
@@ -92,15 +96,22 @@ public class Color {
 			blue = 1;
 		}
 
-//		if(red < 0){
-//			red = 0;
-//		}
-//		if(green < 0){
-//			green = 0;
-//		}
-//		if(blue < 0){
-//			blue = 0;
-//		}
+		if(red < 0){
+			red = 0;
+		}
+		if(green < 0){
+			green = 0;
+		}
+		if(blue < 0){
+			blue = 0;
+		}
+		return new Color(red, green, blue);
+	}
+
+	public Color subtract(Color c) {
+		double red = this.red - c.red;
+		double green = this.green - c.green;
+		double blue = this.blue - c.blue;
 		return new Color(red, green, blue);
 	}
 

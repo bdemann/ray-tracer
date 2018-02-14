@@ -8,12 +8,12 @@ public class DirectionalLight extends Light {
 	private Point3D lightDir;
 
 	public DirectionalLight(Color lightColor, Point3D lightDir){
-		super(lightColor);
+		super(new Point3D(0, 0, 0), lightColor);
 		this.lightDir = lightDir;
 	}
 	
 	@Override
-	public Point3D getCenter() {
+	public Point3D getDirectionToLight(Point3D origin) {
 		return lightDir;
 	}
 }

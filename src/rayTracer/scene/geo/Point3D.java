@@ -74,11 +74,23 @@ public class Point3D {
 	public double getAngle(Point3D b) {
 		// When A and B are normalized
 		// A dot B = cos(theta)
-		return Math.acos(this.normalize().dotProduct(b.normalize()));
+		double dotProd = this.normalize().dotProduct(b.normalize());
+		if(dotProd == 1 || dotProd == -1) {
+			return 0;
+		}
+		return Math.acos(dotProd);
 	}
 
 	public double distance(Point3D b) {
 		return this.subtract(b).magnitude();
+	}
+
+	public double getSmallAngle(Point3D b) {
+		double angle = this.getAngle(b);
+		if (angle > Math.PI/2) {
+			return angle - Math.PI/2;
+		}
+		return angle;
 	}
 
 }

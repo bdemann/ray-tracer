@@ -28,13 +28,13 @@ public class RayTracer {
 		boolean testImages = false;
 		System.out.println("Starting Ray Tracer");
 		if(testImages){
-			for(int i = 0; i < 8; i++){
-				new RayTracer(i, 1).traceImage("./results/image" + i + ".png");
+			for(int i = 0; i < 10; i++){
+				new RayTracer(i, 14).traceImage("./results/image" + i + ".png");
 				System.out.println("Finished image " + i);
 			}
 		} else {
 			for(int frame = 0; frame < 72; frame++){
-				int sceneNumber = 6;
+				int sceneNumber = 9;
 				String path = String.format("./results/turnAround/%d/", sceneNumber);
 				File dir = new File(path);
 				if(!dir.exists()) {
@@ -127,7 +127,7 @@ public class RayTracer {
 
 		Color ambient = ambientLight.getColor();
 		Color cl = lights.get(0).getColor();
-		Point3D l = lights.get(0).getCenter();
+		Point3D l = lights.get(0).getDirectionToLight(point);
 		Point3D e = (scene.getCamera(0).getCenterOfProjection().subtract(point)).normalize();
 		double nDotL = n.dotProduct(l);
 		Point3D r = ((n.multiply(2).multiply(nDotL)).subtract(l)).normalize();
@@ -140,13 +140,54 @@ public class RayTracer {
 		return diffuse;
 	}
 	
+	private Color getMultiLightPhongContribuition(Shape target, Point3D point, List<Light> lights, AmbientLight ambientLight) {
+		Point3D n = target.getNormal(point).normalize();
+		Color diffuse = target.getDiffuse();
+		Color ambient = ambientLight.getColor();
+		
+		
+		Point3D eye = (scene.getCamera(0).getCenterOfProjection().subtract(point)).normalize();
+		Color cp = target.getSpec();
+		
+		Color ambientShading = diffuse.multiply(ambient);
+		Color shading = new Color(0,0,0);
+		
+		for (Light light : lights){
+			Color cl = light.getColor();
+			Point3D l = light.getDirectionToLight(point);
+			double nDotL = n.dotProduct(l);
+			Point3D r = ((n.multiply(2).multiply(nDotL)).subtract(l)).normalize();
+			Color diffuseShading = diffuse.multiply(cl.multiply(Math.max(0,nDotL)));
+			Color specularShading = cl.multiply(cp.multiply(Math.pow(Math.max(0, eye.dotProduct(r)), target.getPhongConst())));
+			shading = shading.add(diffuseShading.add(specularShading));
+		}
+		
+		return ambientShading.add(shading);
+	}
+	
+	private Color getSpecular(Shape target, Point3D point, List<Light> lights, AmbientLight ambientLight){
+		Point3D n = target.getNormal(point).normalize();
+		Point3D eye = (scene.getCamera(0).getCenterOfProjection().subtract(point)).normalize();
+		Color cp = target.getSpec();
+		Color shading = new Color(0,0,0);
+		
+		for (Light light : lights){
+			Color cl = light.getColor();
+			Point3D l = light.getDirectionToLight(point);
+			double nDotL = n.dotProduct(l);
+			Point3D r = ((n.multiply(2).multiply(nDotL)).subtract(l)).normalize();
+			Color specularShading = cl.multiply(cp.multiply(Math.pow(Math.max(0, eye.dotProduct(r)), target.getPhongConst())));
+			shading = shading.add(specularShading);
+		}
+		return shading;
+	}
+	
 	public Color traceRay(Ray3D ray, int depth){
 		if(depth >= maxDepth){
 			return scene.getBackgroundColor();
 		}
 		
 		List<Shape> shapes = scene.getShapes();
-		Light light = scene.getLight(0);
 		AmbientLight ambientLight = scene.getAmbientLight();
 		
 		Intersection in = getClosetIntersection(shapes, ray);
@@ -169,20 +210,20 @@ public class RayTracer {
 		//calculate launch point of new ray
 		Point3D launchPoint = closest.add(n.multiply(0.00001));
 		
-		Ray3D rayToLight = rayToLight(launchPoint, light);
-		
 		//figure out if in shadow
-		boolean shadow = inShadow(rayToLight);
+		double shadowAmount = shadowAmount(launchPoint);
 		
 		
 		Color diffuse = target.getDiffuse();
 		
 		if(target.getType() == Shape.DIFFUSE){
-			diffuse = getPhongContribution(target, closest, scene.getLights(), ambientLight);
+			diffuse = getMultiLightPhongContribuition(target, closest, scene.getLights(), ambientLight);
+//			diffuse = getPhongContribution(target, closest, scene.getLights(), ambientLight);
 		} else if(target.getType() == Shape.REFLECTIVE){
+			Color spec = getSpecular(target, closest, scene.getLights(), ambientLight);
 			Point3D reflection = reflect(ray, n);
 			Color reflect = traceRay(new Ray3D(launchPoint, reflection), depth + 1);
-			diffuse = diffuse.add(reflect.multiply(target.getReflectInt()));
+			diffuse = diffuse.add(reflect.multiply(target.getReflectInt())).add(spec);
 		} else if(target.getType() == Shape.TRANSPARENT){
 			Point3D refract = refract(ray, target.getIndexOfRefraction(),n);
 			launchPoint = closest.add(n.multiply(-0.00001));
@@ -190,20 +231,22 @@ public class RayTracer {
 			if (target instanceof Sphere) {
 				indexOfRefraction = target.getIndexOfRefraction();
 			}
-			diffuse = traceRay(refractedRay, depth + 1);
+			diffuse = diffuse.multiply(.5).add(traceRay(refractedRay, depth + 1));
 		}
 		
-		if(shadow && target.getType() != Shape.REFLECTIVE){
-			diffuse = diffuse.blacken();
+		if(shadowAmount > 0 && target.getType() != Shape.REFLECTIVE){
+			if(shadowAmount >= 1){
+				diffuse = diffuse.blacken();
+			} else {
+//				diffuse = diffuse.darkenGood();
+				diffuse = diffuse.multiply(1.0/7);
+//				diffuse = diffuse.blacken();
+			}
 		}
 		
 		diffuse = diffuse.clipColor();
 		
 		return diffuse;
-	}
-
-	private Ray3D rayToLight(Point3D launchPoint, Light light) {
-		return new Ray3D(launchPoint, light.getCenter());
 	}
 
 	private Point3D reflect(Ray3D ray, Point3D n) {
@@ -215,43 +258,19 @@ public class RayTracer {
 		
 		return d.subtract(twoNDDotN);
 	}
-
+	
 	private Point3D refract(Ray3D ray, double indexOfRefraction, Point3D normal) {
-//		double ni = ray.indexOfRefraction;
-//		double nt = indexOfRefraction;
-//		//angle = acos(v1�v2)
-//		Point3D rd = ray.getDirection().normalize();
-//		Point3D n = normal.normalize();
-//		double theta = Math.acos(n.dotProduct(rd));
-//		double sinPhi = (ni * Math.sin(theta))/nt;
-//		double phi = Math.asin(sinPhi);
-//		
-//		double sin = Math.pow(ni/nt, 2) + (1 + Math.pow(Math.cos(theta), 2));
-//		Point3D t = rd.multiply(ni/nt).subtract(normal.multiply((ni/nt) * Math.cos(theta) + Math.sqrt(1-sin)));
-
-		// I = incoming vector
-		// T = outgoing vector
-		// N = normal
-		// theta = angle between I and N
-		// phi = angle between T and N
-		// n1 = index of refraction of material 1
-		// n2 = index of refraction of material 2
-		// n = n2/n1 = sin(theta)/sin(phi)
-		// c = cos(theta)
-		// T = n * I + (n + c - sqrt(1 + n^2 * (c^2 - 1))) * N
-		//Break it up for readability
-		// vector1 = n * I
-		// s = sqrt(1 + n^2 * (c^2 - 1))
-		// scalar1 = n + c - s
-		// vector2 = scalar1 * N
-		// T = vector1 + vector2
-		Point3D I = ray.getDirection().subtract(ray.getOrigin());
+		Point3D I = ray.getDirection();
 		Point3D T = null;
 		Point3D N = normal;
 		double theta = I.getAngle(N);
+//		if(theta < Math.PI/2) {
+//			N = normal.multiply(-1);
+//			theta = I.getAngle(N);
+//		}
 		double n1 = this.indexOfRefraction;
 		double n2 = indexOfRefraction;
-		double n = n2/n1;
+		double n = n1/n2;
 		double c = Math.cos(theta);
 		
 		Point3D vector1 = I.multiply(n);
@@ -263,15 +282,23 @@ public class RayTracer {
 		return T;
 	}
 
-	private boolean inShadow(Ray3D ray) {
-		boolean noShadow= true;
-		if(noShadow) {
-			return false;
+	private double shadowAmount(Point3D origin) {
+		double shadow = 0;
+		for (Light light : scene.getLights()) {
+			Point3D lightDir = light.getDirectionToLight(origin);
+			Ray3D ray = new Ray3D(origin, lightDir);
+			if (inShadow(ray)) {
+				shadow += 1;
+			}
 		}
+		return shadow/(double)scene.getLights().size();
+	}
+	
+	private boolean inShadow(Ray3D ray) {
 		List<Shape> shapes = scene.getShapes();
 		for(int i = 0; i < shapes.size(); i++){
 			Point3D intersect = shapes.get(i).intersect(ray);
-			if(intersect != null){
+			if(intersect != null && shapes.get(i).getType() != Shape.TRANSPARENT){
 				return true;
 			}
 		}

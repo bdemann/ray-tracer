@@ -11,6 +11,7 @@ public class Sphere extends Shape {
 		super(type, reflectInt);
 		this.center = center;
 		this.radius = radius;
+		this.color = reflectInt;
 		if(type != REFLECTIVE){
 			System.out.println("Warning you aren't doing the constructor you think you are. Reflective");
 		}

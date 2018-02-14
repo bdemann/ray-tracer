@@ -5,15 +5,21 @@ import rayTracer.scene.shaders.Color;
 
 public abstract class Light {
 
-	private Color cl;
+	protected Color color;
+	protected Point3D position;
 	
-	public Light(Color cl){
-		this.cl = cl;
+	public Light(Point3D position, Color cl){
+		this.position = position;
+		this.color = cl;
 	}
 
-	public abstract Point3D getCenter();
+	public abstract Point3D getDirectionToLight(Point3D origin);
 	
 	public Color getColor(){
-		return cl;
+		return color;
+	}
+	
+	public Point3D getPosition() {
+		return position;
 	}
 }
