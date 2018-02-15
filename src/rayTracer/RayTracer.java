@@ -6,7 +6,8 @@ import java.io.IOException;
 import java.util.List;
 
 import rayTracer.scene.Camera;
-import rayTracer.scene.Scene;
+import rayTracer.scene.IScene;
+import rayTracer.scene.MedianSplitScene;
 import rayTracer.scene.TestScenes;
 import rayTracer.scene.geo.Point3D;
 import rayTracer.scene.geo.Ray3D;
@@ -15,20 +16,21 @@ import rayTracer.scene.geo.Sphere;
 import rayTracer.scene.lights.AmbientLight;
 import rayTracer.scene.lights.Light;
 import rayTracer.scene.shaders.Color;
+import rayTracer.scene.shaders.Shader;
 
 public class RayTracer {
 	private static final int MAX_DEPTH = 10;
 	private int maxDepth;
-	Scene scene;
+	IScene scene;
 	private double indexOfRefraction = 1.0003;
 
 	FileWriter fw = null;
 	
 	public static void main(String[] args){
-		boolean testImages = false;
+		boolean testImages = true;
 		System.out.println("Starting Ray Tracer");
 		if(testImages){
-			for(int i = 0; i < 10; i++){
+			for(int i = 0; i < 11; i++){
 				new RayTracer(i, 14).traceImage("./results/image" + i + ".png");
 				System.out.println("Finished image " + i);
 			}
@@ -53,6 +55,7 @@ public class RayTracer {
 		maxDepth = MAX_DEPTH;
 		TestScenes tests = new TestScenes(scene);
 		this.scene = tests.getTestScene(scene, frame);
+//		this.scene = new MedianSplitScene(tests.getTestScene(scene, frame));
 	}
 	
 	public void traceImage(String fileName){
@@ -123,7 +126,7 @@ public class RayTracer {
 	
 	private Color getPhongContribution(Shape target, Point3D point, List<Light> lights, AmbientLight ambientLight){
 		Point3D n = target.getNormal(point).normalize();
-		Color diffuse = target.getDiffuse();
+		Color diffuse = target.getShader().getDiffuse();
 
 		Color ambient = ambientLight.getColor();
 		Color cl = lights.get(0).getColor();
@@ -131,23 +134,23 @@ public class RayTracer {
 		Point3D e = (scene.getCamera(0).getCenterOfProjection().subtract(point)).normalize();
 		double nDotL = n.dotProduct(l);
 		Point3D r = ((n.multiply(2).multiply(nDotL)).subtract(l)).normalize();
-		Color cp = target.getSpec();
+		Color cp = target.getShader().getSpec();
 		
 		//cl*cp*max(0,eDotR)^p
 		diffuse = diffuse.multiply(ambient.add(cl.multiply(Math.max(0,nDotL))));
-		diffuse = diffuse.add(cl.multiply(cp.multiply(Math.pow(Math.max(0, e.dotProduct(r)), target.getPhongConst()))));
+		diffuse = diffuse.add(cl.multiply(cp.multiply(Math.pow(Math.max(0, e.dotProduct(r)), target.getShader().getPhongConst()))));
 
 		return diffuse;
 	}
 	
 	private Color getMultiLightPhongContribuition(Shape target, Point3D point, List<Light> lights, AmbientLight ambientLight) {
 		Point3D n = target.getNormal(point).normalize();
-		Color diffuse = target.getDiffuse();
+		Color diffuse = target.getShader().getDiffuse();
 		Color ambient = ambientLight.getColor();
 		
 		
 		Point3D eye = (scene.getCamera(0).getCenterOfProjection().subtract(point)).normalize();
-		Color cp = target.getSpec();
+		Color cp = target.getShader().getSpec();
 		
 		Color ambientShading = diffuse.multiply(ambient);
 		Color shading = new Color(0,0,0);
@@ -158,7 +161,7 @@ public class RayTracer {
 			double nDotL = n.dotProduct(l);
 			Point3D r = ((n.multiply(2).multiply(nDotL)).subtract(l)).normalize();
 			Color diffuseShading = diffuse.multiply(cl.multiply(Math.max(0,nDotL)));
-			Color specularShading = cl.multiply(cp.multiply(Math.pow(Math.max(0, eye.dotProduct(r)), target.getPhongConst())));
+			Color specularShading = cl.multiply(cp.multiply(Math.pow(Math.max(0, eye.dotProduct(r)), target.getShader().getPhongConst())));
 			shading = shading.add(diffuseShading.add(specularShading));
 		}
 		
@@ -168,7 +171,7 @@ public class RayTracer {
 	private Color getSpecular(Shape target, Point3D point, List<Light> lights, AmbientLight ambientLight){
 		Point3D n = target.getNormal(point).normalize();
 		Point3D eye = (scene.getCamera(0).getCenterOfProjection().subtract(point)).normalize();
-		Color cp = target.getSpec();
+		Color cp = target.getShader().getSpec();
 		Color shading = new Color(0,0,0);
 		
 		for (Light light : lights){
@@ -176,7 +179,7 @@ public class RayTracer {
 			Point3D l = light.getDirectionToLight(point);
 			double nDotL = n.dotProduct(l);
 			Point3D r = ((n.multiply(2).multiply(nDotL)).subtract(l)).normalize();
-			Color specularShading = cl.multiply(cp.multiply(Math.pow(Math.max(0, eye.dotProduct(r)), target.getPhongConst())));
+			Color specularShading = cl.multiply(cp.multiply(Math.pow(Math.max(0, eye.dotProduct(r)), target.getShader().getPhongConst())));
 			shading = shading.add(specularShading);
 		}
 		return shading;
@@ -214,27 +217,27 @@ public class RayTracer {
 		double shadowAmount = shadowAmount(launchPoint);
 		
 		
-		Color diffuse = target.getDiffuse();
+		Color diffuse = target.getShader().getDiffuse();
 		
-		if(target.getType() == Shape.DIFFUSE){
+		if(target.getShader().getType() == Shader.DIFFUSE){
 			diffuse = getMultiLightPhongContribuition(target, closest, scene.getLights(), ambientLight);
 //			diffuse = getPhongContribution(target, closest, scene.getLights(), ambientLight);
-		} else if(target.getType() == Shape.REFLECTIVE){
+		} else if(target.getShader().getType() == Shader.REFLECTIVE){
 			Color spec = getSpecular(target, closest, scene.getLights(), ambientLight);
 			Point3D reflection = reflect(ray, n);
 			Color reflect = traceRay(new Ray3D(launchPoint, reflection), depth + 1);
-			diffuse = diffuse.add(reflect.multiply(target.getReflectInt())).add(spec);
-		} else if(target.getType() == Shape.TRANSPARENT){
-			Point3D refract = refract(ray, target.getIndexOfRefraction(),n);
+			diffuse = diffuse.add(reflect.multiply(target.getShader().getReflectInt())).add(spec);
+		} else if(target.getShader().getType() == Shader.TRANSPARENT){
+			Point3D refract = refract(ray, target.getShader().getIndexOfRefraction(),n);
 			launchPoint = closest.add(n.multiply(-0.00001));
 			Ray3D refractedRay = new Ray3D(launchPoint, refract);
 			if (target instanceof Sphere) {
-				indexOfRefraction = target.getIndexOfRefraction();
+				indexOfRefraction = target.getShader().getIndexOfRefraction();
 			}
 			diffuse = diffuse.multiply(.5).add(traceRay(refractedRay, depth + 1));
 		}
 		
-		if(shadowAmount > 0 && target.getType() != Shape.REFLECTIVE){
+		if(shadowAmount > 0 && target.getShader().getType() != Shader.REFLECTIVE){
 			if(shadowAmount >= 1){
 				diffuse = diffuse.blacken();
 			} else {
@@ -298,7 +301,7 @@ public class RayTracer {
 		List<Shape> shapes = scene.getShapes();
 		for(int i = 0; i < shapes.size(); i++){
 			Point3D intersect = shapes.get(i).intersect(ray);
-			if(intersect != null && shapes.get(i).getType() != Shape.TRANSPARENT){
+			if(intersect != null && shapes.get(i).getShader().getType() != Shader.TRANSPARENT){
 				return true;
 			}
 		}

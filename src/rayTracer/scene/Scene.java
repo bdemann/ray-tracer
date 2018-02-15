@@ -8,7 +8,7 @@ import rayTracer.scene.lights.AmbientLight;
 import rayTracer.scene.lights.Light;
 import rayTracer.scene.shaders.Color;
 
-public class Scene {
+public class Scene implements IScene {
 	double startTime;
 	double endTime;
 	double currTime;

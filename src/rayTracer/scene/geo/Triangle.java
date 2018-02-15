@@ -1,6 +1,6 @@
 package rayTracer.scene.geo;
 
-import rayTracer.scene.shaders.Color;
+import rayTracer.scene.shaders.Shader;
 
 public class Triangle extends Shape {
 
@@ -8,34 +8,11 @@ public class Triangle extends Shape {
 	private Point3D b;
 	private Point3D c;
 
-	public Triangle(Point3D a, Point3D b, Point3D c, int type, Color color, Color highlight, int phongConst) {
-		super(type, color, highlight, phongConst);
+	public Triangle(Point3D a, Point3D b, Point3D c, Shader shader) {
+		super(shader);
 		this.a = a.multiply(1);
 		this.b = b.multiply(1);
 		this.c = c.multiply(1);
-		if(type != DIFFUSE){
-			System.out.println("Warning you aren't doing the constructor you think you are. Diffuse");
-		}
-	}
-	
-	public Triangle(Point3D a, Point3D b, Point3D c, int type, Color reflectInt){
-		super(type, reflectInt);
-		this.a = a.multiply(1);
-		this.b = b.multiply(1);
-		this.c = c.multiply(1);
-		if(type != REFLECTIVE){
-			System.out.println("Warning you aren't doing the constructor you think you are. Reflective");
-		}
-	}
-	
-	public Triangle(Point3D a, Point3D b, Point3D c, int type, Color color, double indexOfRefraction){
-		super(type, color, indexOfRefraction);
-		this.a = a.multiply(1);
-		this.b = b.multiply(1);
-		this.c = c.multiply(1);
-		if(type != TRANSPARENT){
-			System.out.println("Warning you aren't doing the constructor you think you are. Transparent");
-		}
 	}
 	
 	private double distanceToOrigin(){
@@ -116,6 +93,57 @@ public class Triangle extends Shape {
 	
 	public String toString(){
 		return "Triangle";
+	}
+
+	@Override
+	public Box getBoudingBox() {
+		double minX = a.getX();
+		double minY = a.getY();
+		double minZ = a.getZ();
+		double maxX = a.getX();
+		double maxY = a.getY();
+		double maxZ = a.getZ();
+		
+		if(b.getX() > maxX){
+			maxX = b.getX();
+		}
+		if(b.getY() > maxY){
+			maxY = b.getY();
+		}
+		if(b.getZ() > maxZ){
+			maxZ = b.getZ();
+		}
+		if(b.getX() < minX){
+			minX = b.getX();
+		}
+		if(b.getY() < minY){
+			minY = b.getY();
+		}
+		if(b.getZ() < minZ){
+			minZ = b.getZ();
+		}
+
+		if(c.getX() > maxX){
+			maxX = c.getX();
+		}
+		if(c.getY() > maxY){
+			maxY = c.getY();
+		}
+		if(c.getZ() > maxZ){
+			maxZ = c.getZ();
+		}
+		if(c.getX() < minX){
+			minX = c.getX();
+		}
+		if(c.getY() < minY){
+			minY = c.getY();
+		}
+		if(c.getZ() < minZ){
+			minZ = c.getZ();
+		}
+		Point3D min = new Point3D(minX, minY, minZ);
+		Point3D max = new Point3D(maxX, maxY, maxZ);
+		return new Box(min, max, this.getShader());
 	}
 
 }

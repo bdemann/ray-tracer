@@ -1,38 +1,16 @@
 package rayTracer.scene.geo;
 
-import rayTracer.scene.shaders.Color;
+import rayTracer.scene.shaders.Shader;
 
 public class Sphere extends Shape {
 
 	private Point3D center;
 	private double radius;
 	
-	public Sphere(Point3D center, double radius, int type, Color reflectInt) {
-		super(type, reflectInt);
+	public Sphere(Point3D center, double radius, Shader shader) {
+		super(shader);
 		this.center = center;
 		this.radius = radius;
-		this.color = reflectInt;
-		if(type != REFLECTIVE){
-			System.out.println("Warning you aren't doing the constructor you think you are. Reflective");
-		}
-	}
-
-	public Sphere(Point3D center, double radius, int type, Color diffuse, Color highlight, int phongConst) {
-		super(type,diffuse,highlight,phongConst);
-		this.center = center;
-		this.radius = radius;
-		if(type != DIFFUSE){
-			System.out.println("Warning you aren't doing the constructor you think you are. Diffuse");
-		}
-	}
-
-	public Sphere(Point3D center, double radius, int type, Color color, double indexOfRefraction) {
-		super(type,color,indexOfRefraction);
-		this.center = center;
-		this.radius = radius;
-		if(type != TRANSPARENT){
-			System.out.println("Warning you aren't doing the constructor you think you are. Transparent");
-		}
 	}
 
 	@Override
@@ -161,28 +139,7 @@ public class Sphere extends Shape {
 	}
 	
 	public String toString(){
-		String colorName;
-		double red = this.color.getRed();
-		double green = this.color.getGreen();
-		double blue = this.color.getBlue();
-		if(red == 1 && green == 1 && blue == 1) {
-			colorName = "white";
-		} else if(red == 1 && green == 0 && blue == 1) {
-			colorName = "magenta";
-		} else if(red == 0 && green == 1 && blue == 1) {
-			colorName = "cyan";
-		} else if(red == 0 && green == 0 && blue == 1) {
-			colorName = "blue";
-		} else if(red == 0 && green == 1 && blue == 0) {
-			colorName = "green";
-		} else if(red == 1 && green == 0 && blue == 0) {
-			colorName = "red";
-		} else if(red == 1 && green == 1 && blue == 0) {
-			colorName = "yellow";
-		} else {
-			colorName = "black";
-		}
-		return "Sphere " + center + " " + colorName;
+		return "Sphere " + center + " " + this.getShader().toString();
 	}
 
 	@Override
@@ -200,5 +157,12 @@ public class Sphere extends Shape {
 
 	public Point3D getCenter() {
 		return center;
+	}
+
+	@Override
+	public Box getBoudingBox() {
+		Point3D min = center.subtract(new Point3D(radius, radius, radius));
+		Point3D max = center.add(new Point3D(radius, radius, radius));
+		return new Box(min, max, this.getShader());
 	}
 }
