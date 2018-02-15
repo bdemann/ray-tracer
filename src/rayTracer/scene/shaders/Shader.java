@@ -42,7 +42,7 @@ public class Shader {
 	
 	public Shader(int type, Color reflectInt){
 		this.surfaceType = type;
-		this.surfaceColor = new Color(1,1,1);
+		this.surfaceColor = new Color(0,0,0);
 		this.highlightColor = new Color(1,1,1);
 		this.phongConst = 32;
 		this.surfaceType = type;

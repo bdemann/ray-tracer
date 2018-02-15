@@ -27,7 +27,7 @@ public class RayTracer {
 	FileWriter fw = null;
 	
 	public static void main(String[] args){
-		boolean testImages = true;
+		boolean testImages = false;
 		System.out.println("Starting Ray Tracer");
 		if(testImages){
 			for(int i = 0; i < 11; i++){
@@ -211,7 +211,11 @@ public class RayTracer {
 		
 		Point3D n = target.getNormal(closest).normalize();
 		//calculate launch point of new ray
-		Point3D launchPoint = closest.add(n.multiply(0.00001));
+		double scalar = 0.00001;
+		if(ray.toVector().dotProduct(n) < 1) {
+			scalar *= -1;
+		}
+		Point3D launchPoint = closest.add(n.multiply(scalar));
 		
 		//figure out if in shadow
 		double shadowAmount = shadowAmount(launchPoint);
@@ -226,10 +230,11 @@ public class RayTracer {
 			Color spec = getSpecular(target, closest, scene.getLights(), ambientLight);
 			Point3D reflection = reflect(ray, n);
 			Color reflect = traceRay(new Ray3D(launchPoint, reflection), depth + 1);
-			diffuse = diffuse.add(reflect.multiply(target.getShader().getReflectInt())).add(spec);
+//			diffuse = diffuse.add(reflect.multiply(target.getShader().getReflectInt())).add(spec);
+			diffuse = diffuse.add(reflect.multiply(target.getShader().getReflectInt()));
 		} else if(target.getShader().getType() == Shader.TRANSPARENT){
 			Point3D refract = refract(ray, target.getShader().getIndexOfRefraction(),n);
-			launchPoint = closest.add(n.multiply(-0.00001));
+//			launchPoint = closest.add(n.multiply(scalar));
 			Ray3D refractedRay = new Ray3D(launchPoint, refract);
 			if (target instanceof Sphere) {
 				indexOfRefraction = target.getShader().getIndexOfRefraction();

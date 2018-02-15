@@ -137,7 +137,7 @@ public class TestScenes {
 		Point3D lookAt = new Point3D(0,0,0);
 		Point3D eye = new Point3D(xPos, 0, zPos);
 		Point3D upVector = new Point3D(0,1,0);
-		int width = 1920;
+		int width = 300;
 		System.out.print("This is the eye location at frame ");
 		System.out.print(frame);
 		System.out.println(eye);
@@ -202,12 +202,8 @@ public class TestScenes {
 		testScene.addLight(new PointLight(new Point3D(0, 1, 0), cl));
 		testScene.setAmbient(new AmbientLight(ambientColor));
 
-		double x = 1;
-		double y = 0.6;
-		double z = -0.6;
 		double rad = 0.075 * 3;
 		
-
 		testScene.addShape(new Sphere(new Point3D(.5, 0, 0), rad, new Shader(Shader.REFLECTIVE, new Color(0.75,0.75,0.75))).getBoudingBox());
 		testScene.addShape(new Sphere(new Point3D(-.5, 0, 0), rad, Shader.BLUE_DIFFUSE).getBoudingBox());
 	}
@@ -246,8 +242,6 @@ public class TestScenes {
 		testScene.addShape(new Sphere(new Point3D(0, 0, -dia), rad, Shader.WHITE_DIFFUSE));
 	}
 	
-
-	
 	public void pointLights(int frame){
 		double radius = 2;
 		double xPos = radius * Math.cos(Math.toRadians(5 * frame));
@@ -281,7 +275,6 @@ public class TestScenes {
 		testScene.addShape(new Sphere(new Point3D(0, 0, dia), rad, Shader.YELLOW_DIFFUSE));
 		testScene.addShape(new Sphere(new Point3D(0, 0, -dia), rad, Shader.WHITE_DIFFUSE));
 	}
-	
 	
 	public void makeTestScene(int frame){
 		Point3D eye = new Point3D(0, 0, 1.2);

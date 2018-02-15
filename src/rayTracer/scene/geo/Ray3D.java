@@ -26,4 +26,8 @@ public class Ray3D {
 	public String toString(){
 		return "Origin: " + origin.toString() + " Direction: " + direction.toString();
 	}
+
+	public Point3D toVector() {
+		return direction.subtract(origin);
+	}
 }
