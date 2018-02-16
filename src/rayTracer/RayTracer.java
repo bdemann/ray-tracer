@@ -23,6 +23,8 @@ public class RayTracer {
 	private int maxDepth;
 	IScene scene;
 	private double indexOfRefraction = 1.0003;
+	private final double iorAir = 1.0003;
+	private boolean inRefract = false;
 
 	FileWriter fw = null;
 	
@@ -212,9 +214,6 @@ public class RayTracer {
 		Point3D n = target.getNormal(closest).normalize();
 		//calculate launch point of new ray
 		double scalar = 0.00001;
-		if(ray.toVector().dotProduct(n) < 1) {
-			scalar *= -1;
-		}
 		Point3D launchPoint = closest.add(n.multiply(scalar));
 		
 		//figure out if in shadow
@@ -233,13 +232,27 @@ public class RayTracer {
 //			diffuse = diffuse.add(reflect.multiply(target.getShader().getReflectInt())).add(spec);
 			diffuse = diffuse.add(reflect.multiply(target.getShader().getReflectInt()));
 		} else if(target.getShader().getType() == Shader.TRANSPARENT){
-			Point3D refract = refract(ray, target.getShader().getIndexOfRefraction(),n);
-//			launchPoint = closest.add(n.multiply(scalar));
-			Ray3D refractedRay = new Ray3D(launchPoint, refract);
+			Point3D refractDirection = null;
 			if (target instanceof Sphere) {
-				indexOfRefraction = target.getShader().getIndexOfRefraction();
+				if(inRefract){
+					refractDirection = refract(ray, target.getShader().getIndexOfRefraction(), this.indexOfRefraction, n);
+					indexOfRefraction = iorAir;
+					inRefract = false;
+				} else {
+					refractDirection = refract(ray, this.indexOfRefraction, target.getShader().getIndexOfRefraction(),n);
+					inRefract = true;
+					indexOfRefraction = target.getShader().getIndexOfRefraction();
+				}
+			} else {
+				refractDirection = refract(ray, this.indexOfRefraction, target.getShader().getIndexOfRefraction(),n);
 			}
-			diffuse = diffuse.multiply(.5).add(traceRay(refractedRay, depth + 1));
+			if(ray.toVector().dotProduct(n) < 1) {
+				scalar *= -1;
+			}
+			launchPoint = closest.add(n.multiply(scalar));
+			Ray3D refractedRay = new Ray3D(launchPoint, refractDirection);
+
+			diffuse = diffuse.multiply(target.getShader().getTransparencyAmt()).add(traceRay(refractedRay, depth + 1));
 		}
 		
 		if(shadowAmount > 0 && target.getShader().getType() != Shader.REFLECTIVE){
@@ -267,7 +280,7 @@ public class RayTracer {
 		return d.subtract(twoNDDotN);
 	}
 	
-	private Point3D refract(Ray3D ray, double indexOfRefraction, Point3D normal) {
+	private static Point3D refract(Ray3D ray, double srcIOR, double desIOR, Point3D normal) {
 		Point3D I = ray.getDirection();
 		Point3D T = null;
 		Point3D N = normal;
@@ -276,8 +289,8 @@ public class RayTracer {
 //			N = normal.multiply(-1);
 //			theta = I.getAngle(N);
 //		}
-		double n1 = this.indexOfRefraction;
-		double n2 = indexOfRefraction;
+		double n1 = srcIOR;
+		double n2 = desIOR;
 		double n = n1/n2;
 		double c = Math.cos(theta);
 		

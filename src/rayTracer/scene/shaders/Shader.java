@@ -23,14 +23,14 @@ public class Shader {
 	public static final Shader CYAN_REFLECTIVE = new Shader(Shader.REFLECTIVE, new Color(0,1,1));
 	public static final Shader BLACK_REFLECTIVE = new Shader(Shader.REFLECTIVE, new Color(0,0,0));
 	
-	public static final Shader WHITE_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(1,1,1), 1.5);
-	public static final Shader RED_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(1,0,0), 1.5);
-	public static final Shader GREEN_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(0,1,0), 1.5);
-	public static final Shader BLUE_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(0,0,1), 1.5);
-	public static final Shader YELLOW_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(1,1,0), 1.5);
-	public static final Shader PURPLE_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(1,0,1), 1.5);
-	public static final Shader CYAN_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(0,1,1), 1.5);
-	public static final Shader BLACK_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(0,0,0), 1.5);
+	public static final Shader WHITE_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(1,1,1), 1.5, .1);
+	public static final Shader RED_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(1,0,0), 1.5, .1);
+	public static final Shader GREEN_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(0,1,0), 1.5, .1);
+	public static final Shader BLUE_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(0,0,1), 1.5, .1);
+	public static final Shader YELLOW_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(1,1,0), 1.5, .1);
+	public static final Shader PURPLE_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(1,0,1), 1.5, .1);
+	public static final Shader CYAN_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(0,1,1), 1.5, .1);
+	public static final Shader BLACK_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(0,0,0), 1.5, .1);
 	
 	private int surfaceType;
 	private Color surfaceColor;
@@ -39,6 +39,7 @@ public class Shader {
 	private double indexOfRefraction;
 	private Color reflectionColor;
 	private Color refractColor;
+	private double transparencyAmount;
 	
 	public Shader(int type, Color reflectInt){
 		this.surfaceType = type;
@@ -62,14 +63,15 @@ public class Shader {
 		}
 	}
 
-	public Shader(int type, Color refractInt, double indexOfRefraction) {
+	public Shader(int type, Color refractInt, double indexOfRefraction, double transparencyAmt) {
 		this.surfaceType = type;
-		this.surfaceColor = new Color(1,1,1);
+		this.surfaceColor = refractInt;
 		this.highlightColor = new Color(1,1,1);
 		this.phongConst = 32;
 		this.surfaceType = type;
 		this.setRefractColor(refractInt);
 		this.indexOfRefraction = indexOfRefraction;
+		this.transparencyAmount = transparencyAmt;
 		if(type != TRANSPARENT){
 			System.out.println("Warning you aren't doing the constructor you think you are. Transparent");
 		}
@@ -151,5 +153,9 @@ public class Shader {
 			colorName = "black";
 		}
 		return colorName;
+	}
+
+	public double getTransparencyAmt() {
+		return transparencyAmount;
 	}
 }
