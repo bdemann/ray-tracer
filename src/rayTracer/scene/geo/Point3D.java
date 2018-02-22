@@ -2,6 +2,8 @@ package rayTracer.scene.geo;
 
 public class Point3D {
 
+	public static final Point3D ORIGIN = new Point3D(0,0,0);
+	public static final Point3D UP = new Point3D(0,1,0);
 	private final double _x;
 	private final double _y;
 	private final double _z;

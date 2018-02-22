@@ -13,9 +13,11 @@ import rayTracer.scene.geo.Point3D;
 import rayTracer.scene.geo.Ray3D;
 import rayTracer.scene.geo.Shape;
 import rayTracer.scene.geo.Sphere;
+import rayTracer.scene.geo.Square;
 import rayTracer.scene.lights.AmbientLight;
 import rayTracer.scene.lights.Light;
 import rayTracer.scene.shaders.Color;
+import rayTracer.scene.shaders.DiffuseComponent;
 import rayTracer.scene.shaders.Shader;
 
 public class RayTracer {
@@ -27,17 +29,19 @@ public class RayTracer {
 	private boolean inRefract = false;
 
 	FileWriter fw = null;
+	private int numberOfJitters = 10;
+	private int samplesPerPixel = 10;
 	
 	public static void main(String[] args){
 		boolean testImages = false;
 		System.out.println("Starting Ray Tracer");
-		if(testImages){
-			for(int i = 0; i < 11; i++){
+		if(testImages) {
+			for(int i = 12; i < 13; i++){
 				new RayTracer(i, 14).traceImage("./results/image" + i + ".png");
 				System.out.println("Finished image " + i);
 			}
 		} else {
-			for(int frame = 0; frame < 72; frame++){
+			for(int frame = 12; frame < 72; frame++){
 				int sceneNumber = 9;
 				String path = String.format("./results/turnAround/%d/", sceneNumber);
 				File dir = new File(path);
@@ -80,11 +84,16 @@ public class RayTracer {
 		for(int i = 0; i < width; i++){ 		//For each row
 			for(int j = 0; j < height; j++){	//For each pixel in the row
 				//Calculate ray
-				Point3D pixelCenter = cam.getPixelCenter(i, j, true);
-				//System.out.println("Pixel: (" + i + "," + j + "). Pixel Center is at: " + pixelCenter);
-				Point3D eye = cam.getCenterOfProjection();
-				Ray3D primaryRay = new Ray3D(eye, pixelCenter.subtract(eye));
-				Color c = traceRay(primaryRay, 0);
+				Color c = new Color(0,0,0);
+				for(int s = 0; s < samplesPerPixel ; s++){
+					Point3D pixelCenter = cam.getPixelCenter(i, j, true);
+					//System.out.println("Pixel: (" + i + "," + j + "). Pixel Center is at: " + pixelCenter);
+					Point3D eye = cam.getCenterOfProjection();
+					Ray3D primaryRay = new Ray3D(eye, pixelCenter.subtract(eye));
+					Color result = traceRay(primaryRay, 0);
+					c = c.add(result);
+				}
+				c = c.multiply(1.0/samplesPerPixel);
 				cam.captureColor(i,j,c);
 			}
 		}
@@ -128,7 +137,8 @@ public class RayTracer {
 	
 	private Color getPhongContribution(Shape target, Point3D point, List<Light> lights, AmbientLight ambientLight){
 		Point3D n = target.getNormal(point).normalize();
-		Color diffuse = target.getShader().getDiffuse();
+		DiffuseComponent diffuse = target.getShader().getDiffuse();
+		Color diffuseColor = diffuse.getDiffuse();
 
 		Color ambient = ambientLight.getColor();
 		Color cl = lights.get(0).getColor();
@@ -136,25 +146,26 @@ public class RayTracer {
 		Point3D e = (scene.getCamera(0).getCenterOfProjection().subtract(point)).normalize();
 		double nDotL = n.dotProduct(l);
 		Point3D r = ((n.multiply(2).multiply(nDotL)).subtract(l)).normalize();
-		Color cp = target.getShader().getSpec();
+		Color cp = diffuse.getSpec();
 		
 		//cl*cp*max(0,eDotR)^p
-		diffuse = diffuse.multiply(ambient.add(cl.multiply(Math.max(0,nDotL))));
-		diffuse = diffuse.add(cl.multiply(cp.multiply(Math.pow(Math.max(0, e.dotProduct(r)), target.getShader().getPhongConst()))));
+		diffuseColor = diffuseColor.multiply(ambient.add(cl.multiply(Math.max(0,nDotL))));
+		diffuseColor = diffuseColor.add(cl.multiply(cp.multiply(Math.pow(Math.max(0, e.dotProduct(r)), diffuse.getPhongConst()))));
 
-		return diffuse;
+		return diffuseColor;
 	}
 	
 	private Color getMultiLightPhongContribuition(Shape target, Point3D point, List<Light> lights, AmbientLight ambientLight) {
 		Point3D n = target.getNormal(point).normalize();
-		Color diffuse = target.getShader().getDiffuse();
+		DiffuseComponent diffuse = target.getShader().getDiffuse();
+		Color diffuseColor = diffuse.getDiffuse();
 		Color ambient = ambientLight.getColor();
 		
 		
 		Point3D eye = (scene.getCamera(0).getCenterOfProjection().subtract(point)).normalize();
-		Color cp = target.getShader().getSpec();
+		Color cp = diffuse.getSpec();
 		
-		Color ambientShading = diffuse.multiply(ambient);
+		Color ambientShading = diffuseColor.multiply(ambient);
 		Color shading = new Color(0,0,0);
 		
 		for (Light light : lights){
@@ -162,29 +173,12 @@ public class RayTracer {
 			Point3D l = light.getDirectionToLight(point);
 			double nDotL = n.dotProduct(l);
 			Point3D r = ((n.multiply(2).multiply(nDotL)).subtract(l)).normalize();
-			Color diffuseShading = diffuse.multiply(cl.multiply(Math.max(0,nDotL)));
-			Color specularShading = cl.multiply(cp.multiply(Math.pow(Math.max(0, eye.dotProduct(r)), target.getShader().getPhongConst())));
+			Color diffuseShading = diffuseColor.multiply(cl.multiply(Math.max(0,nDotL)));
+			Color specularShading = cl.multiply(cp.multiply(Math.pow(Math.max(0, eye.dotProduct(r)), diffuse.getPhongConst())));
 			shading = shading.add(diffuseShading.add(specularShading));
 		}
 		
 		return ambientShading.add(shading);
-	}
-	
-	private Color getSpecular(Shape target, Point3D point, List<Light> lights, AmbientLight ambientLight){
-		Point3D n = target.getNormal(point).normalize();
-		Point3D eye = (scene.getCamera(0).getCenterOfProjection().subtract(point)).normalize();
-		Color cp = target.getShader().getSpec();
-		Color shading = new Color(0,0,0);
-		
-		for (Light light : lights){
-			Color cl = light.getColor();
-			Point3D l = light.getDirectionToLight(point);
-			double nDotL = n.dotProduct(l);
-			Point3D r = ((n.multiply(2).multiply(nDotL)).subtract(l)).normalize();
-			Color specularShading = cl.multiply(cp.multiply(Math.pow(Math.max(0, eye.dotProduct(r)), target.getShader().getPhongConst())));
-			shading = shading.add(specularShading);
-		}
-		return shading;
 	}
 	
 	public Color traceRay(Ray3D ray, int depth){
@@ -220,17 +214,23 @@ public class RayTracer {
 		double shadowAmount = shadowAmount(launchPoint);
 		
 		
-		Color diffuse = target.getShader().getDiffuse();
+		Color diffuse = target.getShader().getColor();
 		
 		if(target.getShader().getType() == Shader.DIFFUSE){
 			diffuse = getMultiLightPhongContribuition(target, closest, scene.getLights(), ambientLight);
 //			diffuse = getPhongContribution(target, closest, scene.getLights(), ambientLight);
 		} else if(target.getShader().getType() == Shader.REFLECTIVE){
-			Color spec = getSpecular(target, closest, scene.getLights(), ambientLight);
 			Point3D reflection = reflect(ray, n);
-			Color reflect = traceRay(new Ray3D(launchPoint, reflection), depth + 1);
+			Color reflect = new Color(0, 0, 0);
+			for(int i = 0 ; i < 1; i++){
+				reflection = jitterDirection(reflection, .2);
+				Color result = traceRay(new Ray3D(launchPoint, reflection), depth + 1);
+				reflect = result;
+			}
+//			reflect = reflect.multiply(1.0/numberOfJitters);
 //			diffuse = diffuse.add(reflect.multiply(target.getShader().getReflectInt())).add(spec);
 			diffuse = diffuse.add(reflect.multiply(target.getShader().getReflectInt()));
+//			diffuse = reflect;
 		} else if(target.getShader().getType() == Shader.TRANSPARENT){
 			Point3D refractDirection = null;
 			if (target instanceof Sphere) {
@@ -250,6 +250,7 @@ public class RayTracer {
 				scalar *= -1;
 			}
 			launchPoint = closest.add(n.multiply(scalar));
+			refractDirection = jitterDirection(refractDirection, 1);
 			Ray3D refractedRay = new Ray3D(launchPoint, refractDirection);
 
 			diffuse = diffuse.multiply(target.getShader().getTransparencyAmt()).add(traceRay(refractedRay, depth + 1));
@@ -268,6 +269,12 @@ public class RayTracer {
 		diffuse = diffuse.clipColor();
 		
 		return diffuse;
+	}
+
+	private Point3D jitterDirection(Point3D dir, double size) {
+		//TODO make it a bounded jitter
+		Square square = new Square(dir, size);
+		return square.getRandomPoint();
 	}
 
 	private Point3D reflect(Ray3D ray, Point3D n) {
@@ -306,11 +313,16 @@ public class RayTracer {
 	private double shadowAmount(Point3D origin) {
 		double shadow = 0;
 		for (Light light : scene.getLights()) {
-			Point3D lightDir = light.getDirectionToLight(origin);
-			Ray3D ray = new Ray3D(origin, lightDir);
-			if (inShadow(ray)) {
-				shadow += 1;
+			double shadowAmount = 0;
+			for(int i = 0; i < 1; i++){
+				Point3D lightDir = light.getDirectionToLight(origin);
+//				lightDir = jitterDirection(lightDir);
+				Ray3D ray = new Ray3D(origin, lightDir);
+				if (inShadow(ray)) {
+					shadowAmount += 1;
+				}
 			}
+			shadow += shadowAmount/numberOfJitters;
 		}
 		return shadow/(double)scene.getLights().size();
 	}

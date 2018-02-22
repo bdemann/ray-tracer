@@ -33,19 +33,25 @@ public class Shader {
 	public static final Shader BLACK_TRANSPARENT = new Shader(Shader.TRANSPARENT, new Color(0,0,0), 1.5, .1);
 	
 	private int surfaceType;
-	private Color surfaceColor;
-	private Color highlightColor;
-	private int phongConst;
+	
 	private double indexOfRefraction;
 	private Color reflectionColor;
 	private Color refractColor;
 	private double transparencyAmount;
 	
-	public Shader(int type, Color reflectInt){
+	double diffuseWeight;
+	double reflectWeight;
+	double transparentWeight;
+	
+	private DiffuseComponent diffuse;
+	
+	public Shader(int type, Color reflectInt) {
+		diffuseWeight = 0;
+		reflectWeight = 1;
+		transparentWeight = 0;
 		this.surfaceType = type;
-		this.surfaceColor = new Color(0,0,0);
-		this.highlightColor = new Color(1,1,1);
-		this.phongConst = 32;
+		this.refractColor = new Color(0, 0, 0);
+		diffuse = new DiffuseComponent(new Color(0,0,0), new Color(1,1,1), 32);
 		this.surfaceType = type;
 		this.reflectionColor = reflectInt;
 		if(type != REFLECTIVE){
@@ -54,20 +60,25 @@ public class Shader {
 	}
 	
 	public Shader(int type, Color color, Color highlight, int phongConst){
+		diffuseWeight = 1;
+		reflectWeight = 0;
+		transparentWeight = 0;
 		this.surfaceType = type;
-		this.surfaceColor = color;
-		this.highlightColor = highlight;
-		this.phongConst = phongConst;
+		this.reflectionColor = new Color(0, 0, 0);
+		this.refractColor = new Color(0, 0, 0);
+		diffuse = new DiffuseComponent(color, highlight, phongConst);
 		if(type != DIFFUSE){
 			System.out.println("Warning you aren't doing the constructor you think you are. Diffuse");
 		}
 	}
 
 	public Shader(int type, Color refractInt, double indexOfRefraction, double transparencyAmt) {
+		diffuseWeight = 0;
+		reflectWeight = 0;
+		transparentWeight = 1;
 		this.surfaceType = type;
-		this.surfaceColor = refractInt;
-		this.highlightColor = new Color(1,1,1);
-		this.phongConst = 32;
+		this.reflectionColor = new Color(0, 0, 0);
+		diffuse = new DiffuseComponent(refractInt, new Color(1,1,1), 32);
 		this.surfaceType = type;
 		this.setRefractColor(refractInt);
 		this.indexOfRefraction = indexOfRefraction;
@@ -77,36 +88,24 @@ public class Shader {
 		}
 	}
 	
+	public Color getColor(){
+		double totalWeight = diffuseWeight + transparentWeight + reflectWeight;
+		Color diffuseContrib = diffuse.getDiffuse().multiply(diffuseWeight/totalWeight);
+		Color reflectContrib = reflectionColor.multiply(reflectWeight/totalWeight);
+		Color transContrip = refractColor.multiply(transparentWeight/totalWeight);
+		return diffuseContrib.add(reflectContrib).add(transContrip);
+	}
+	
+	public DiffuseComponent getDiffuse(){
+		return diffuse;
+	}
+	
 	public int getType() {
 		return surfaceType;
 	}
 
 	public void setType(int type) {
 		this.surfaceType = type;
-	}
-
-	public Color getDiffuse() {
-		return surfaceColor;
-	}
-
-	public void setColor(Color color) {
-		this.surfaceColor = color;
-	}
-
-	public Color getSpec() {
-		return highlightColor;
-	}
-
-	public void setHighlight(Color highlight) {
-		this.highlightColor = highlight;
-	}
-
-	public int getPhongConst() {
-		return phongConst;
-	}
-
-	public void setPhongConst(int phongConst) {
-		this.phongConst = phongConst;
 	}
 	
 	public Color getReflectInt() {
@@ -130,9 +129,9 @@ public class Shader {
 	}
 	
 	public String toString() {
-		double red = this.surfaceColor.getRed();
-		double green = this.surfaceColor.getGreen();
-		double blue = this.surfaceColor.getBlue();
+		double red = this.diffuse.getDiffuse().getRed();
+		double green = this.diffuse.getDiffuse().getGreen();
+		double blue = this.diffuse.getDiffuse().getBlue();
 
 		String colorName;
 		if(red == 1 && green == 1 && blue == 1) {

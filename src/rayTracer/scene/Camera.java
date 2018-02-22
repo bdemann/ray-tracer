@@ -1,8 +1,7 @@
 package rayTracer.scene;
 
-import java.util.Random;
-
 import rayTracer.output.ImageBuffer;
+import rayTracer.random.Gaussian;
 import rayTracer.scene.geo.Point3D;
 import rayTracer.scene.shaders.Color;
 
@@ -18,19 +17,6 @@ public class Camera {
 	private Point3D u;
 	private Point3D v;
 	private Point3D n;
-
-	public static void main(String[] args) {
-		double[] result = {0,0};
-		int sampleSize = 10000;
-		for(int i = 0; i < sampleSize; i++){
-			double[] temp = gaussian(i);
-			result[0] += temp[0];
-			result[1] += temp[1];
-//			result += random(i);
-		}
-		System.out.println(result[0]/sampleSize);
-		System.out.println(result[1]/sampleSize);
-	}
 	
 	public Camera(Point3D centerOfProjection, Point3D lookAtPoint, Point3D upVector, int resX, int resY, double fov){
 		result = new ImageBuffer(resX,resY);
@@ -62,43 +48,15 @@ public class Camera {
 		double v = windowPoint.getY() + stepY/2;
 		double n = windowPoint.getZ();
 		
-		u = rand(u + stepX/2, u - stepX/2);
-		v = rand(v + stepY/2, v - stepY/2);
+//		u = Gaussian.rand(u + stepX/2, u - stepX/2);
+//		v = Gaussian.rand(v + stepY/2, v - stepY/2);
 		
-//		u *= random(1);
-//		v *= random(1);
+		double rand[] = Gaussian.gaussian(1);
+//		
+		u += rand[0] * ((u + stepX/2) - (u - stepX/2));
+		v += rand[1] * ((v + stepY/2) - (v - stepY/2));
 		
 		return windowToWorld(new Point3D(u, -v, n));
-	}
-	
-	private static double rand(double max, double min) {
-		Random rand = new Random();
-		double exponent = -(Math.pow(rand.nextDouble() - .5, 2) * 20);
-		double gaussian = Math.exp(exponent);
-		double result = gaussian * (max - min) + min;
-		return result;
-	}
-	
-	private static double[] gaussian(long seed){
-		Random rand = new Random();
-		double x1, x2, w, y1, y2;
-		 
-        do {
-                x1 = 2.0 * rand.nextDouble() - 1.0;
-                x2 = 2.0 * rand.nextDouble() - 1.0;
-                w = x1 * x1 + x2 * x2;
-        } while ( w >= 1.0 );
-
-        w = Math.sqrt( (-2.0 * Math.log( w ) ) / w );
-        y1 = x1 * w;
-        y2 = x2 * w;
-        double[]result = {y1, y2};
-        return result;
-	}
-	
-	private static double random(long seed) {
-		Random rand = new Random();
-		return rand.nextDouble();
 	}
 
 	public Point3D windowToWorld(Point3D windowPoint) {
